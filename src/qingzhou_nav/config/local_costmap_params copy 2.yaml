@@ -1,0 +1,32 @@
+local_costmap:
+
+
+
+  global_frame: odom    #里程计坐标系
+
+  robot_base_frame: base_link     #机器人坐标系
+
+  update_frequency: 5.0  #代价地图更新频率  原始为3.0
+  publish_frequency: 5.0  #代价地图发布频率  原始为3.0
+
+  #新加的
+  transform_tolerence: 0.5  #等待坐标变换发布信息的超时时间    原始为1
+ #结束
+
+
+ #从costmap_common_params.yaml中copy过来新加的
+  cost_scaling_factor:  5.0  # exponential rate at which the obstacle cost drops off (default: 10) 代价比例系数，越大则代价值越小   原始为5
+  inflation_radius:     0.3  # max. distance from an obstacle at which costs are incurred for planning paths.  膨胀半径，扩展在碰撞区以外的代价区域，使得机器人规划路径避开障碍物  原始为0.25
+  #结束
+
+  #static_map: false   # 不需要静态地图，可以提升导航    原始被注释掉的
+
+
+  rolling_window: true  #是否使用动态窗口，默认为 false ，在静态的全局地图中，地图不会变化
+  width: 3.0  #局部地图宽度 单位是     m     原始为2.5
+  height: 3.0   #局部地图高度 单位是     m     原始为2.5
+  resolution: 0.05   #局部地图的分辨率  单位是     m 
+  plugins: 
+  - {name: obstacle_layer, type: "costmap_2d::ObstacleLayer"} 
+  - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
+  
