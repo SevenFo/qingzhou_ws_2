@@ -1,13 +1,67 @@
 #include "TCP_Sender.h"
 
 TCP_Sender *tcpsender;
-
+int curruentGoal = 0;//stop 0 start 1 getGood 2 throwGood 
+rcm robotControlMsg;
 void TimerCB(const ros::TimerEvent &e)
 {
     tcpsender->SendRobotStatusInfo();
     std::cout<<"log :clocked"<<std::endl;
 }
 
+bool checkGoal(actionlib::SimpleClientGoalState actionResult)
+{
+    if(actionResult != actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+        curruentGoal = 0;
+    }
+    else
+    {
+        ROS_INFO("move to next goal");
+        curruentGoal += 1;
+    }
+}
+
+bool runGoal(int goal = curruentGoal)
+{
+    switch((goal%3))
+    {
+        case 1:
+        {
+            ROS_INFO("Excuating goal");
+            tcpsender->startPoint.target_pose.header.stamp = ros::Time::now();
+            tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->startPoint);
+            ROS_INFO("waiting for action result");
+            tcpsender->moveBaseActionClientPtr->waitForResult();
+            checkGoal(tcpsender->moveBaseActionClientPtr->getState());
+            break;
+        }
+        case 2:
+        {
+            ROS_INFO("Excuating goal");
+            tcpsender->getGoodsPoint.target_pose.header.stamp = ros::Time::now();
+            tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->getGoodsPoint);
+            ROS_INFO("waiting for action result");
+            tcpsender->moveBaseActionClientPtr->waitForResult();
+            checkGoal(tcpsender->moveBaseActionClientPtr->getState());
+            break;
+        }
+        case 3:
+        {
+            ROS_INFO("Excuating goal");
+            tcpsender->throwGoodsPoint.target_pose.header.stamp = ros::Time::now();
+            tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->throwGoodsPoint);
+            ROS_INFO("waiting for action result");
+            tcpsender->moveBaseActionClientPtr->waitForResult();
+            checkGoal(tcpsender->moveBaseActionClientPtr->getState());
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }    
+}
 
 int main(int argc, char **  argv)
 {
@@ -20,12 +74,13 @@ int main(int argc, char **  argv)
     if(tcpsender->SocketInit())
     {
         timer.start();
-        rcm robotControlMsg;
+
         while(ros::ok())
         {
             ros::spinOnce();
             if(tcpsender->RetriveMsg(&robotControlMsg,sizeof(robotControlMsg)))
             {
+
                 switch(robotControlMsg.controlFunctionSelector)
                 {
                     case 0x01:
@@ -46,38 +101,49 @@ int main(int argc, char **  argv)
                         //tcpsender->startPoint.target_pose.header.stamp = ros::Time::now();
                         tcpsender->startPoint.target_pose.pose.position.x = robotControlMsg.startPointGoalX;
                         tcpsender->startPoint.target_pose.pose.position.y = robotControlMsg.startPointGoalY;
+                        tcpsender->startPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.startPointGoalZ);
                         tcpsender->getGoodsPoint.target_pose.pose.position.x = robotControlMsg.getGoodsPointX;
                         tcpsender->getGoodsPoint.target_pose.pose.position.y = robotControlMsg.getGoodsPointY;
+                        tcpsender->getGoodsPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.getGoodsPointZ);
                         tcpsender->throwGoodsPoint.target_pose.pose.position.x = robotControlMsg.throwGoodsPointX;
                         tcpsender->throwGoodsPoint.target_pose.pose.position.y = robotControlMsg.throwGoodsPointY;
-                        ROS_INFO("sleep 5 second for excuating goal");
-                        dsleep.sleep();
-                        tcpsender->startPoint.target_pose.header.stamp = ros::Time::now();
-                        tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->startPoint);
-                        tcpsender->moveBaseActionClientPtr->waitForResult();
+                        tcpsender->throwGoodsPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.throwGoodsPointZ);
+                        break;
+                    }
+                    case 0x03:
+                    {
+                        
+                        tcpsender->userPoint.target_pose.pose.position.x = robotControlMsg.userPointX;
+                        tcpsender->userPoint.target_pose.pose.position.y = robotControlMsg.userPointY;
+                        tcpsender->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.userPointZ);
+                        ROS_INFO("Excuating user goal");
+                        tcpsender->userPoint.target_pose.header.stamp = ros::Time::now();
+                        tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->userPoint);
                         ROS_INFO("waiting for action result");
-                        auto actionResult = tcpsender->moveBaseActionClientPtr->getState();
-                        if(actionResult == actionlib::SimpleClientGoalState::SUCCEEDED)//success
+                        tcpsender->moveBaseActionClientPtr->waitForResult();
+                        if(tcpsender->moveBaseActionClientPtr->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                         {
-                            ROS_INFO("Reach start point and move forward to get goods");
-                            tcpsender->getGoodsPoint.target_pose.header.stamp = ros::Time::now();
-                            tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->getGoodsPoint);
-                            tcpsender->moveBaseActionClientPtr->waitForResult();
-                            ROS_INFO("waiting for action result");
-                            actionResult = tcpsender->moveBaseActionClientPtr->getState();
-                            if(actionResult == actionlib::SimpleClientGoalState::SUCCEEDED)
-                            {
-                                ROS_INFO("Reach get goods point and move forward to throw goods");
-                            }
-                            else
-                            {
-                                ROS_INFO("Unable to reach get goods point");
-                            }
+                            ROS_INFO("reach user goal");
                         }
                         else
                         {
-                            ROS_INFO("Unable to reach start point");
+                            ROS_INFO("unable to reach user goal");
                         }
+                    }
+                    case 0x04:
+                    {
+                        if(curruentGoal == 0)
+                        {
+                            curruentGoal = 1;
+                        }
+                        else
+                        {
+                            curruentGoal = 0;
+                        }
+                        break;
+                    }
+                    case 0x05:
+                    {
                         break;
                     }
                     default:
@@ -89,7 +155,13 @@ int main(int argc, char **  argv)
                 //处理接受到的控制消息
 
             }
+            // if(curruentGoal)//如果开始执行目标点
+            // {
+
+            // }
+            runGoal();
             rate.sleep();
+
         }
     }
     else

@@ -15,6 +15,7 @@
 #include "move_base_msgs/MoveBaseGoal.h"
 #include "move_base_msgs/MoveBaseAction.h"
 #include <actionlib/client/simple_action_client.h>
+#include "tf/tf.h"
 #include "fcntl.h"
 
 #define SERVER_IP "127.0.0.1"
@@ -32,12 +33,16 @@ typedef struct RobotControlMsg //ros 发送过来的消息结构体
     float angularSpeed;//角速度
     float startPointGoalX;
     float startPointGoalY;
+    float startPointGoalZ;
     float getGoodsPointX;
     float getGoodsPointY;
+    float getGoodsPointZ;
     float throwGoodsPointX;
     float throwGoodsPointY;
+    float throwGoodsPointZ;
     float userPointX;
     float userPointY;
+    float userPointZ;
 }rcm;
 
 typedef struct RobotStatusMsg
@@ -90,7 +95,7 @@ public:
     move_base_msgs::MoveBaseGoal startPoint;
     move_base_msgs::MoveBaseGoal getGoodsPoint;
     move_base_msgs::MoveBaseGoal throwGoodsPoint;
-    
+    move_base_msgs::MoveBaseGoal userPoint;
     
     ros::Publisher cmdvelPuber;
     void SubBettaryInfoCB(const std_msgs::Float32::ConstPtr &msg);
