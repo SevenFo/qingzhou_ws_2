@@ -5,7 +5,7 @@ robot_radius: 0.25  #设置机器人的半径，单位是米。
 footprint: [[0.25,0.22],[0.27,0],[0.25,-0.22],[-0.25, -0.22],[-0.25,0.22]]
 recovery_behavior_enabled: true
 
-controller_frequency: 10
+controller_frequency: 20
 
 obstacle_layer:                #   配置障碍物图层
   enabled:        true         #   是否启用该层      true
