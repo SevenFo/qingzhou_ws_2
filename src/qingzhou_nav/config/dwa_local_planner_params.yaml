@@ -28,7 +28,7 @@ DWAPlannerROS:
   latch_xy_goal_tolerance: false   #如果锁定目标公差且机器人到达目标xy位置，机器人将简单地旋转到位，即使它在目标公差的范围内结束。
 
 # Forward Simulation Parameters
-  sim_time: 1       #   前向模拟轨迹的时间，单位为 seconds  (default: 1.7)    原始为2.1
+  sim_time: 2.1       #   前向模拟轨迹的时间，单位为 seconds  (default: 1.7)    原始为2.1
   vx_samples: 8       #   x方向速度的样本数  (default: 3)
   vy_samples: 1       #   y方向速度的样本数。(default: 10)    diff drive robot, there is only one sample
   vtheta_samples: 20  #   角速度的样本数。    (default: 20)
