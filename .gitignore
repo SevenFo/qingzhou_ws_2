@@ -2,3 +2,6 @@
 /.vscode
 /build
 /devel
+src/qingzhou_odom/imu_tools
+src/qingzhou_odom/imu_calibrate/imu_calib
+src/navigation_msgs
