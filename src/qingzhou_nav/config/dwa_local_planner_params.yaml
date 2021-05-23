@@ -28,14 +28,14 @@ DWAPlannerROS:
   latch_xy_goal_tolerance: false   #如果锁定目标公差且机器人到达目标xy位置，机器人将简单地旋转到位，即使它在目标公差的范围内结束。
 
 # Forward Simulation Parameters
-  sim_time: 2.1       #   前向模拟轨迹的时间，单位为 seconds  (default: 1.7)    原始为2.1
+  sim_time: 2.1       #   前向模拟轨迹的时间，单位为 seconds  (default: 1.7)
   vx_samples: 8       #   x方向速度的样本数  (default: 3)
   vy_samples: 1       #   y方向速度的样本数。(default: 10)    diff drive robot, there is only one sample
   vtheta_samples: 20  #   角速度的样本数。    (default: 20)
 
 # Trajectory Scoring Parameters
-  path_distance_bias: 35.0      #   刻画局部路径和全局路径的贴合程度，该权重参数越大说明越贴合，越小说明不用那么贴合。(default: 32.0)   - weighting for how much it should stick to the global path plan
-  goal_distance_bias: 26.0      #   达到局部目标点的权重参数，也用来控制速度。权重如果设置为0表示要求完全到达目标点，这会导致机器人走动缓慢和震荡的现象，因为要求达到目标点的精度太高，所对机器人的控制比较苛刻 (default: 24.0)   - wighting for how much it should attempt to reach its goal
+  path_distance_bias: 35.0      #   控制器靠近给定路径的权重 (default: 32.0)   - weighting for how much it should stick to the global path plan
+  goal_distance_bias: 26.0      #   控制器应该在多大程度上尝试达到其本地目标的加权，也控制着速度。 (default: 24.0)   - wighting for how much it should attempt to reach its goal
   occdist_scale: 0.6            #   控制器尝试避免障碍物的权重。 (default: 0.01)   - weighting for how much the controller should avoid obstacles
   forward_point_distance: 0.2   #   从机器人中心点到放置一个额外得分点的距离，单位是米。 (default: 0.325)  - how far along to place an additional scoring point
   stop_time_buffer: 0.2         #   机器人在碰撞前必须停止的时间，以使轨迹被认为是有效的，单位是秒。(default: 0.2)    - amount of time a robot must stop in before colliding for a valid traj.
@@ -50,6 +50,7 @@ DWAPlannerROS:
   publish_cost_grid_pc: true
   global_frame_id: odom
 
+  planner_frequency: 5.0 # default 1.0
 
 # Differential-drive robot configuration - necessary?
 #  holonomic_robot: false
