@@ -1,7 +1,7 @@
 #include "qingzhou_bringup/qingzhou_bringup.h"
 // 基本上没有差别，甚至有些巧合的写得一样
 
-const bool debug = true;
+const bool debug = false;
 long long LeftticksPerMeter = 0;    
 long long rightticksPerMeter = 0;   
 long long LeftticksPer2PI = 0;      
