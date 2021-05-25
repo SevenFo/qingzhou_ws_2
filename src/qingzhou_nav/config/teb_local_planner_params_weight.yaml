@@ -102,10 +102,14 @@ TebLocalPlannerROS:
  selection_prefer_initial_plan: 0.95
  selection_obst_cost_scale: 1.0
  selection_alternative_time_cost: False
-
- roadmap_graph_no_samples: 15
- roadmap_graph_area_width: 5
- roadmap_graph_area_length_scale: 1.0
+  # ## Costmap converter plugin   
+  # costmap_converter_plugin: "costmap_converter::CostmapToPolygonsDBSMCCH"
+  # #costmap_converter_plugin: "costmap_converter::CostmapToLinesDBSRANSAC"
+  # #costmap_converter_plugin: "costmap_converter::CostmapToLinesDBSMCCH"
+  # #costmap_converter_plugin: "costmap_converter::CostmapToPolygonsDBSConcaveHull"
+  # #costmap_converter_plugin: "" # deactivate plugin
+  # costmap_converter_spin_thread: True
+  # costmap_converter_rate: 5_area_length_scale: 1.0
  h_signature_prescaler: 0.5
  h_signature_threshold: 0.1
  obstacle_heading_threshold: 0.45

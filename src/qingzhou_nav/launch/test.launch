@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<launch>
+  <master auto="start"/>
+
+  <include file="$(find qingzhou_nav)/launch/ydlidar.launch" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find qingzhou_nav)/maps/test_map_final.yaml" output="screen"/>
+
+  <include file="$(find qingzhou_nav)/launch/amcl.launch" />
+</launch>

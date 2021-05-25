@@ -5,14 +5,14 @@ local_costmap:
   publish_frequency: 3.0  #局部代价地图的发布频率;
   #static_map: false      #局部代价地图一般不设置为静态地图，因为需要检测是否在机器人附近有新增的动态障碍物;
   
-  cost_scaling_factor:  5.0  # 代价比例系数，越大则代价值越小   原始为5
-  inflation_radius:     0.3  # 膨胀半径，扩展在碰撞区以外的代价区域，使得机器人规划路径避开障碍物  原始为0.25
+  cost_scaling_factor: 5  # 代价比例系数，越大则代价值越小   原始为5
+  inflation_radius:    0.4  # 膨胀半径，扩展在碰撞区以外的代价区域，使得机器人规划路径避开障碍物  原始为0.25
 
   
   
   rolling_window: true    #使用滚动窗口，始终保持机器人在当前局部地图的中心位置;
-  width: 2.5              #滚动窗口的宽度，单位是米;
-  height: 2.5             #滚动窗口的高度，单位是米;
+  width: 3.0 #2.5              #滚动窗口的宽度，单位是米;
+  height: 2.0            #滚动窗口的高度，单位是米;
   resolution: 0.05        #地图的分辨率，该分辨率可以从加载的地图相对应的配置文件中获取到;
   plugins: 
   - {name: obstacle_layer, type: "costmap_2d::ObstacleLayer"} 
