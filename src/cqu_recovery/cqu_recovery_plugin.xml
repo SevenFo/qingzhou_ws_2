@@ -1,0 +1,7 @@
+<library path="lib/libcqu_recovery">
+  <class name="cqu_recovery_behavior/cqu_recovery" type="cqu_recovery_behavior::cqu_recovery" base_class_type="nav_core::RecoveryBehavior">
+    <description>
+      A recovery behavior created by cquer will  make your car move backward for 0.5 s.
+    </description>
+  </class>
+</library>

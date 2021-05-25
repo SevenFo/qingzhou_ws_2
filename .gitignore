@@ -2,3 +2,5 @@
 /.vscode
 /build
 /devel
+/build_bcl
+/devel_bcl

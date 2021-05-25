@@ -4,16 +4,16 @@ global_costmap:
   #:在全局代价地图中机器人本体的基坐标系，就是机器人上的根坐标系。
   #通过global_frame和robot_base_frame就可以计算两个坐标系之间的变换，得知机器人在全局坐标系中的坐标了。
 
-  update_frequency: 5.0  #全局代价地图更新频率，一般全局代价地图更新频率设置的比较小;（false:0.5）
+  update_frequency: 1.0   #全局代价地图更新频率，一般全局代价地图更新频率设置的比较小;（false:0.5）
                           #这个数值越大，你的计算机的CPU负担会越重，特别对于全局地图，通常设定一个相对较小、在1.0到5.0之间的值。
 
-  #static_map: false      #配置是否使用map_server提供的地图来初始化，一般全局地图都是静态的，需要设置为true;
+  #static_map: true      #配置是否使用map_server提供的地图来初始化，一般全局地图都是静态的，需要设置为true;
   
   rolling_window: false  #是否在机器人移动过程中需要滚动窗口，始终保持机器人在当前窗口中心位置;
   resolution: 0.05       #地图的分辨率，该分辨率可以从加载的地图相对应的配置文件中获取到;
   
-  cost_scaling_factor:  5.5 # 代价比例系数，越大则代价值越小   原始为5 10
-  inflation_radius:     0.45        # 膨胀半径，扩展在碰撞区以外的代价区域，使得机器人规划路径避开障碍物  原始为0.25
+  cost_scaling_factor:  10.0  # 代价比例系数，越大则代价值越小   原始为5
+  inflation_radius:     0.4  # 膨胀半径，扩展在碰撞区以外的代价区域，使得机器人规划路径避开障碍物  原始为0.25
 
 
   transform_tolerance: 1.0   #坐标系间的转换可以忍受的最大延时;   //tf的超时时间

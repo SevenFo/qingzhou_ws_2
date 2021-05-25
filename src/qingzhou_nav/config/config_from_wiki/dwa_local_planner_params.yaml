@@ -14,8 +14,8 @@ DWAPlannerROS:
   #   do not set min_trans_vel to 0.0 otherwise dwa will always think translational velocities
   #   are non-negligible and small in place rotational velocities will be created.
 
-  max_vel_theta: 0.8  #   机器人的最大角速度的绝对值，单位为 rad/s (default: 1.0)   choose slightly less than the base's capability
-  min_vel_theta: 0.45  #  机器人的最小角速度的绝对值，单位为 rad/s (default: 0.4)   this is the min angular velocity when there is negligible translational velocity
+  max_vel_theta: 0.5  #   机器人的最大角速度的绝对值，单位为 rad/s (default: 1.0)   choose slightly less than the base's capability
+  min_vel_theta: 0.1  #  机器人的最小角速度的绝对值，单位为 rad/s (default: 0.4)   this is the min angular velocity when there is negligible translational velocity
   theta_stopped_vel: 0.1  #   机器人被认属于“停止”状态时的旋转速度。单位为 rad/s
   
   acc_lim_x: 18.0 #   机器人在x方向的加速度极限，单位为 meters/sec^2(default: 2.5)  maximum is theoretically 2.0, but we 
@@ -54,3 +54,10 @@ DWAPlannerROS:
 
 # Differential-drive robot configuration - necessary?
 #  holonomic_robot: false
+  yaw_goal_tolerance: 0.02
+
+#The tolerance in radians for the controller in yaw/rotation when achieving its goal
+  xy_goal_tolerance: 0.1
+#The tolerance in meters for the controller in the x & y distance when achieving a goal
+  latch_xy_goal_tolerance: false
+  #If goal tolerance is latched, if the robot ever reaches the goal xy location it will simply rotate in place, even if it ends up outside the goal tolerance while it is doing so.
