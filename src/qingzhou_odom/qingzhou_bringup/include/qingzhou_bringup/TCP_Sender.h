@@ -69,6 +69,7 @@ typedef struct RobotStatusMsg
     float locationY;
     float ekfX;
     float ekfY;
+    int trafficLight;//红绿灯 红色0 绿色1 未知-1
 }rsm;
 
 class TCP_Sender

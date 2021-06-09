@@ -22,12 +22,12 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 
     //初始化停止线的位置
     trafficLightStopLine.target_pose.header.frame_id = "map";
-    trafficLightStopLine.target_pose.pose.position.x = 2.354;
-    trafficLightStopLine.target_pose.pose.position.y = -6.582;
+    trafficLightStopLine.target_pose.pose.position.x = 2.289;
+    trafficLightStopLine.target_pose.pose.position.y = -6.894;
     trafficLightStopLine.target_pose.pose.orientation.x = 0.000;
     trafficLightStopLine.target_pose.pose.orientation.y = 0.000;
-    trafficLightStopLine.target_pose.pose.orientation.z = -0.713;
-    trafficLightStopLine.target_pose.pose.orientation.w = 0.701;
+    trafficLightStopLine.target_pose.pose.orientation.z = -0.7;
+    trafficLightStopLine.target_pose.pose.orientation.w = 0.714;
     
     
     
@@ -105,7 +105,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
         }
         }
     }
-    else if(state == actionlib::SimpleClientGoalState::ABORTED)
+    else if(state == actionlib::SimpleClientGoalState::ABORTED || state == actionlib::SimpleClientGoalState::PREEMPTED)
     {
         robotState.goalstate = aborted;
     }
@@ -119,10 +119,10 @@ void TCP_Sender::GoalActiveCB()
 
 void TCP_Sender::SubTrafficLightCB(const std_msgs::Float32ConstPtr &msg)
 {
-    
+    robotStatusMsg.trafficLight = (int)(msg.get()->data);
     if(!haveDetectedTfl)
     {
-        if(msg.get()->data == red && robotState.robotlocation != tfl)
+        if((int)(msg.get()->data) == red && robotState.robotlocation != tfl)
         {
             ROS_INFO_STREAM("red");
             haveDetectedTfl = true;//保证只能检测到一次红绿灯，防止频繁更改目标点，当到达下一个目标点的时候才释放红绿灯检测权
@@ -132,8 +132,10 @@ void TCP_Sender::SubTrafficLightCB(const std_msgs::Float32ConstPtr &msg)
             this->moveBaseActionClientPtr->sendGoal(trafficLightStopLine, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.goalstate = active;
             robotState.robotlocation = loadingtotfl;
+            ROS_INFO("going to tfl");
+            ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
         }
-        if(msg.get()->data == green)
+        if((int)(msg.get()->data) == green)
         {
             ROS_INFO_STREAM("green");
             //change goal to next postioin
@@ -141,6 +143,8 @@ void TCP_Sender::SubTrafficLightCB(const std_msgs::Float32ConstPtr &msg)
             this->moveBaseActionClientPtr->sendGoal(throwGoodsPoint, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.goalstate = active;
             robotState.robotlocation = tfltounload;
+            ROS_INFO("going to unload");
+            ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
         }
     }
 
@@ -162,11 +166,11 @@ void TCP_Sender::RunGoal()
         }
         case load:
         {
-            moveBaseActionClientPtr->sendGoal(throwGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            moveBaseActionClientPtr->sendGoal(trafficLightStopLine,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.robotlocation = loadingtotfl;
             robotState.goalstate = active;
-            ROS_INFO("going to unload");
-            ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
+            ROS_INFO("going to tfl");
+            ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
             break;
         }
         case unload:
@@ -194,6 +198,8 @@ void TCP_Sender::RunGoal()
             moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.robotlocation = starttoload;
             robotState.goalstate = active;
+            ROS_INFO("going to load");
+            ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
             break;
         }
         case tfltounload:
@@ -201,6 +207,8 @@ void TCP_Sender::RunGoal()
             moveBaseActionClientPtr->sendGoal(throwGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.robotlocation = tfltounload;
             robotState.goalstate = active;
+            ROS_INFO("going to unload");
+            ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
             break;
         }
         case unloadtoload:
@@ -208,9 +216,20 @@ void TCP_Sender::RunGoal()
             moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.robotlocation = unloadtoload;
             robotState.goalstate = active;
+            ROS_INFO("going to load");
+            ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
+
             break;
         }
-        
+        case loadingtotfl:
+        {
+            moveBaseActionClientPtr->sendGoal(trafficLightStopLine,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = loadingtotfl;
+            robotState.goalstate = active;
+            ROS_INFO("going to tfl");
+            ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
+            break;
+        }
         default:
         {
             break;

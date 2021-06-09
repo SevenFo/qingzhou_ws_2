@@ -78,6 +78,7 @@ void actuator::callback_move_base(const geometry_msgs::Twist::ConstPtr &msg) //�
 
    moveBaseControl.TargetSpeed = v*32/0.43;                                  //计算目标线速度
    moveBaseControl.TargetAngle = round(atan(w*CARL/v)*57.3);                 //计算目标角度
+ //   moveBaseControl.TargetAngle = round(msg->angular.z*(180.0/3.1415)); 
  //  moveBaseControl.TargetAngle+=60;                                          //stm32 program has subtract 60
    
   /*  printf("cmd_vel msg linx: %.2f,liny:%.2f,targetSpeed:%d,targetAngle:%d\n",msg->linear.x,msg->angular.z,                  
