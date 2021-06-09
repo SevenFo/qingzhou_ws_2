@@ -1,11 +1,11 @@
 <?xml version="1.0" ?>
 <launch>
   <master auto="start"/>
-<!-- 
-  <include file="$(find qingzhou_nav)/launch/ydlidar.launch" />
-  <node name="map_server" pkg="map_server" type="map_server" args="$(find qingzhou_nav)/maps/test_map_final.yaml" output="screen"/>
 
-  <include file="$(find qingzhou_nav)/launch/amcl.launch" /> -->
+  <include file="$(find qingzhou_nav)/launch/ydlidar.launch" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find qingzhou_nav)/maps/test_map_6.8.yaml" output="screen"/>
+
+  <include file="$(find qingzhou_nav)/launch/amcl.launch" /> 
 
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
 	  
@@ -17,17 +17,17 @@
     <param name="controller_frequency" value="5.0" />
     <param name="controller_patience" value="5.0" />
     <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
-    <param name="controller_frequency" value="10.0" />   
+    <param name="controller_frequency" value="5.0" />   
     <param name="controller_patience" value="5.0" />
     <rosparam param="recovery_behaviors"> 
     [ { name: "cqu_recovery_behavior/cqu_recovery", type: "cqu_recovery_behavior/cqu_recovery" } ] 
     </rosparam> 
-    <rosparam file="$(find qingzhou_nav)/config/costmap_common_params_copy_1.yaml" command="load" ns="global_costmap" />
-    <rosparam file="$(find qingzhou_nav)/config/costmap_common_params_copy_1.yaml" command="load" ns="local_costmap" />
-    <rosparam file="$(find qingzhou_nav)/config/local_costmap_params_copy_1.yaml" command="load" />
-    <rosparam file="$(find qingzhou_nav)/config/global_costmap_params_copy_1.yaml" command="load" />
-    <rosparam file="$(find qingzhou_nav)/config/dwa_local_planner_params_copy_1.yaml" command="load" />
-    <rosparam file="$(find qingzhou_nav)/config/global_planner_params_copy_1.yaml" command="load" />
+    <rosparam file="$(find qingzhou_nav)/config/costmap_common_params_teb.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find qingzhou_nav)/config/costmap_common_params_teb.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find qingzhou_nav)/config/local_costmap_params_teb.yaml" command="load" />
+    <rosparam file="$(find qingzhou_nav)/config/global_costmap_params_teb.yaml" command="load" />
+    <rosparam file="$(find qingzhou_nav)/config/dwa_local_planner_params_teb.yaml" command="load" />
+    <rosparam file="$(find qingzhou_nav)/config/global_planner_params_teb.yaml" command="load" />
     <rosparam file="$(find qingzhou_nav)/config/teb_local_planner_params.yaml" command="load" />
      <!-- <rosparam file="$(find qingzhou_nav)/config/costmap_converter_params.yaml" command="load" /> -->
     <!--    <remap from="/odom" to="/odom_ekf"/> --> 

@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <launch>
-
+    
     <node name="qingzhou_bringup" pkg="qingzhou_bringup" type="qingzhou_bringup" output="screen"  respawn="true"/>
       <param name="mcuserialport" value="/dev/stm32board" type="string"/> 
       <param name="mcubaudrate" value = "115200" type = "int"/> 
@@ -43,6 +43,10 @@
       <remap from="output" to="/odom_ekf"/>
    </node> -->     
 
+  <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_imulink"
+    args="0.12 0.0 0.08 0.0 0.0  0.0 /base_link /laser_frame 40" /> -->
+    
   <node pkg="tf" type="static_transform_publisher" name="base_link_to_imulink"
     args="-0.08 0.0 0.05 0.0 0.0  0.0 /base_link /imu_link 50" />
+  
 </launch>

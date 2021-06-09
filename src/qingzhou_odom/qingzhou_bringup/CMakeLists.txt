@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   actionlib
 )
+find_package(Boost REQUIRED COMPONENTS thread)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -130,6 +131,8 @@ include_directories(
   include/qingzhou_bringup
   ${catkin_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/include
+  ${Boost_INCLUDE_DIRS}
+
 )
 
 ## Declare a C++ library
@@ -166,7 +169,7 @@ include_directories(
    ${catkin_LIBRARIES}
  )
  target_link_libraries(TCP_Send_node
- ${catkin_LIBRARIES}
+ ${catkin_LIBRARIES} ${Boost_LIBRARIES}
 )
 target_link_libraries(UDP_Send_node
 ${catkin_LIBRARIES}

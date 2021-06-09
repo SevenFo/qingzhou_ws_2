@@ -3,10 +3,14 @@
 TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 {
     nh = nodeHandler;//获取节点句柄
-    bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",5,&TCP_Sender::SubBettaryInfoCB,this);
-    speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel",50,&TCP_Sender::SubSpeedCB,this);
-    locationSuber = nh.subscribe<nav_msgs::Odometry>("/odom",50,&TCP_Sender::SubLocCB,this);
-    ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);
+    bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",5,&TCP_Sender::SubBettaryInfoCB,this);//电池电量
+    speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel",50,&TCP_Sender::SubSpeedCB,this);//速度
+    locationSuber = nh.subscribe<nav_msgs::Odometry>("/odom",50,&TCP_Sender::SubLocCB,this);//odom
+    ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);//ekf
+    trafficLightSuber = nh.subscribe<std_msgs::Float32>("/color",5,&TCP_Sender::SubTrafficLightCB,this);;//红绿灯
+    robotState.goalstate = lost;
+    robotState.robotlocation = start;
+    haveDetectedTfl = false;
     sleepDur = ros::Duration(1);
     std::cout<<"creatededed"<<std::endl;
     cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",50);
@@ -14,7 +18,20 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     moveBaseActionClientPtr = new MoveBaseActionClient("move_base");
     ROS_INFO("wait for movebase action server");
     moveBaseActionClientPtr->waitForServer();//等待服务
+    
 
+    //初始化停止线的位置
+    trafficLightStopLine.target_pose.header.frame_id = "map";
+    trafficLightStopLine.target_pose.pose.position.x = 2.354;
+    trafficLightStopLine.target_pose.pose.position.y = -6.582;
+    trafficLightStopLine.target_pose.pose.orientation.x = 0.000;
+    trafficLightStopLine.target_pose.pose.orientation.y = 0.000;
+    trafficLightStopLine.target_pose.pose.orientation.z = -0.713;
+    trafficLightStopLine.target_pose.pose.orientation.w = 0.701;
+    
+    
+    
+    
 }
 
 TCP_Sender::~TCP_Sender()
@@ -46,6 +63,171 @@ void TCP_Sender::SubEkfPoseCB(const geometry_msgs::PoseWithCovarianceStamped::Co
     robotStatusMsg.ekfX = msg.get()->pose.pose.position.x;
     robotStatusMsg.ekfY = msg.get()->pose.pose.position.y;
 }
+
+
+//目标点完成的回调函数用于更改robotState.goalstate
+void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr &result)
+{
+    ROS_INFO("Finished in state [%s]", state.toString().c_str());
+    std::cout<<"i am in call back funciton"<<std::endl;
+    //ROS_INFO("Answer: %i", result->sequence.back());
+    if(state == actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+        haveDetectedTfl = false;
+        robotState.goalstate = reach;
+        switch (robotState.robotlocation)
+        {
+        case starttoload:
+        {
+            robotState.robotlocation = load;
+            break;
+        }
+        case tfltounload:
+        {
+            robotState.robotlocation = unload;
+            break;
+        }
+        case unloadtoload:
+        {
+            robotState.robotlocation = load;
+            break;
+        }
+        case loadingtotfl:
+        {
+            robotState.robotlocation = tfl;
+        
+            break;
+        }
+        default:
+        {
+            ROS_WARN("cant get positonstate");
+            break;
+        }
+        }
+    }
+    else if(state == actionlib::SimpleClientGoalState::ABORTED)
+    {
+        robotState.goalstate = aborted;
+    }
+    std::cout<<"goal state change to "<<robotState.goalstate << " and now location is "<<robotState.robotlocation<<std::endl;
+    
+}
+void TCP_Sender::GoalActiveCB()
+{
+    std::cout<<"i am in goal active callback function"<<std::endl;
+}
+
+void TCP_Sender::SubTrafficLightCB(const std_msgs::Float32ConstPtr &msg)
+{
+    
+    if(!haveDetectedTfl)
+    {
+        if(msg.get()->data == red && robotState.robotlocation != tfl)
+        {
+            ROS_INFO_STREAM("red");
+            haveDetectedTfl = true;//保证只能检测到一次红绿灯，防止频繁更改目标点，当到达下一个目标点的时候才释放红绿灯检测权
+            //change goal to stop line
+            //boost::thread actionGoalThread(this->moveBaseActionClientPtr->sendGoal,this->moveBaseActionClientPtr,)
+            
+            this->moveBaseActionClientPtr->sendGoal(trafficLightStopLine, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.goalstate = active;
+            robotState.robotlocation = loadingtotfl;
+        }
+        if(msg.get()->data == green)
+        {
+            ROS_INFO_STREAM("green");
+            //change goal to next postioin
+            haveDetectedTfl = true;
+            this->moveBaseActionClientPtr->sendGoal(throwGoodsPoint, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.goalstate = active;
+            robotState.robotlocation = tfltounload;
+        }
+    }
+
+}
+
+
+void TCP_Sender::RunGoal()
+{
+    if(robotState.goalstate == reach)//成功到达某个目标点
+    {
+        switch (robotState.robotlocation)
+        {
+        case start:
+        {
+            moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = starttoload;
+            robotState.goalstate = active;
+            break;
+        }
+        case load:
+        {
+            moveBaseActionClientPtr->sendGoal(throwGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = loadingtotfl;
+            robotState.goalstate = active;
+            ROS_INFO("going to unload");
+            ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
+            break;
+        }
+        case unload:
+        {
+            moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = unloadtoload;
+            robotState.goalstate = active;
+            ROS_INFO("going to load");
+            ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
+            break;
+        }
+        
+        default:
+        {
+            break;
+        }
+        }
+    }
+    else if(robotState.goalstate == aborted) //如果目标在中途异常停止
+    {
+        switch (robotState.robotlocation)
+        {
+        case starttoload:
+        {
+            moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = starttoload;
+            robotState.goalstate = active;
+            break;
+        }
+        case tfltounload:
+        {
+            moveBaseActionClientPtr->sendGoal(throwGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = tfltounload;
+            robotState.goalstate = active;
+            break;
+        }
+        case unloadtoload:
+        {
+            moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = unloadtoload;
+            robotState.goalstate = active;
+            break;
+        }
+        
+        default:
+        {
+            break;
+        }
+        }
+    }
+    else if(robotState.goalstate == lost)
+    {
+        moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2),boost::bind(&TCP_Sender::GoalActiveCB,this));
+        robotState.goalstate = active;
+        robotState.robotlocation = starttoload;
+        ROS_INFO("going to load");
+        ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
+    }
+}
+
+
 bool TCP_Sender::SocketInit()//初始化SOCKET
 {
     shSrv = socket(AF_INET,SOCK_STREAM,0);//TCP STREAM
@@ -102,12 +284,12 @@ bool TCP_Sender::SendMsg(const void* dataPtr,size_t dataSize)
 {
     if(send(shCli,dataPtr,dataSize,0) == -1)
     {
-        std::cout<<"error: socket send msg failed"<<std::endl;
+        //std::cout<<"error: socket send msg failed"<<std::endl;
         return false;
     }
     else
     {
-        std::cout<<"log: socket send msg successed"<<std::endl;
+        //std::cout<<"log: socket send msg successed"<<std::endl;
         return true;
     }
 }
