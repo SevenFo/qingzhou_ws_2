@@ -13,7 +13,7 @@ global_costmap:
   resolution: 0.05       #地图的分辨率，该分辨率可以从加载的地图相对应的配置文件中获取到;
   
   cost_scaling_factor:  10.0  # 代价比例系数，越大则代价值越小   原始为5
-  inflation_radius:     0.5  # 膨胀半径，扩展在碰撞区以外的代价区域，使得机器人规划路径避开障碍物  原始为0.25
+  inflation_radius:     0.4  # 膨胀半径，扩展在碰撞区以外的代价区域，使得机器人规划路径避开障碍物  原始为0.25
 
 
   transform_tolerance: 5.0   #坐标系间的转换可以忍受的最大延时;   //tf的超时时间

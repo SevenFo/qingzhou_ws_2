@@ -3,7 +3,7 @@
 TebLocalPlannerROS:
 
   odom_topic: odom
-  map_frame: map
+  map_frame: odom
     
  # Trajectory
   
@@ -11,7 +11,7 @@ TebLocalPlannerROS:
   dt_ref: 0.3          #局部路径规划的解析度
   dt_hysteresis: 0.1   #允许改变的时域解析度的浮动范围， 一般为 dt_ref 的 10% 左右;bal
   max_samples: 500
-  global_plan_overwrite_orientation: False  #覆盖全局路径中局部路径点的朝向，有些全局规划者在开始和全局目标之间没有考虑局部子目标的方向，因此自动确定
+  global_plan_overwrite_orientation: True  #覆盖全局路径中局部路径点的朝向，有些全局规划者在开始和全局目标之间没有考虑局部子目标的方向，因此自动确定
   allow_init_with_backwards_motion:  False   #允许在开始时想后退来执行轨迹，如果为true，则在目标在本地成本图中落后于起点的情况下，可以使用向后运动来初始化基础轨迹
   max_global_plan_lookahead_dist: 1.0  #  used 3.0  #考虑优化的全局计划子集的最大长度（累积欧几里得距离）（如果为0或负数：禁用；长度也受本地Costmap大小的限制）
   global_plan_viapoint_sep: 0.5
@@ -97,8 +97,8 @@ TebLocalPlannerROS:
   obstacle_cost_exponent: 4
   weight_max_vel_x: 2
   weight_max_vel_theta: 2
-  weight_acc_lim_x: 1    # 1
-  weight_acc_lim_theta: 1   #1
+  weight_acc_lim_x: 1
+  weight_acc_lim_theta: 1
   weight_kinematics_nh: 1000    #迫使机器人只选择前进的方向，也就是权重越大，倒车惩罚越大。(0~1000)
   weight_kinematics_forward_drive: 1000    #优化过程中，迫使机器人只选择前进方向，差速轮适用
   weight_kinematics_turning_radius: 3   #机器人最小转向半径的权重，越大则越容易达到最小转向半径的情况。 (0~1000)

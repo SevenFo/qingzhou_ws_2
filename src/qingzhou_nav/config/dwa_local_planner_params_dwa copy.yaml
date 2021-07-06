@@ -2,21 +2,21 @@
 #清除代价地图
 DWAPlannerROS:
 
-  max_vel_x: 1.5  #  机器人在x方向的最大速度   单位为m/s 0.55
+  max_vel_x: 1.0  #  机器人在x方向的最大速度   单位为m/s 0.55
   min_vel_x: 0.25  #  机器人在x方向的最小速度   单位为m/s 0.32
 
   max_vel_y: 0.0   #  机器人在y方向的最大速度   单位为m/s
   min_vel_y: 0.0   #  机器人在y方向的最大速度   单位为m/s
 
-  max_vel_trans: 0.95 #  机器人最大平移速度的绝对值，单位为 m/s  (default: 0.55)   choose slightly less than the base's capability
-  min_vel_trans: 0.2  #  机器人最小平移速度的绝对值，单位为 m/s (default: 0.1)  this is the min trans velocity when there is negligible rotational velocity
+  max_vel_trans: 0.6 #  机器人最大平移速度的绝对值，单位为 m/s  (default: 0.55)   choose slightly less than the base's capability
+  min_vel_trans: 0.05  #  机器人最小平移速度的绝对值，单位为 m/s (default: 0.1)  this is the min trans velocity when there is negligible rotational velocity
   trans_stopped_vel: 0.1  #机器人被认属于“停止”状态时的平移速度。如果机器人的速度低于该值，则认为机器人已停止。单位为 m/s
 
   # Warning!
   #   do not set min_trans_vel to 0.0 otherwise dwa will always think translational velocities
   #   are non-negligible and small in place rotational velocities will be created.
 
-  max_vel_theta: 0.65  #   机器人的最大角速度的绝对值，单位为 rad/s (default: 1.0)   choose slightly less than the base's capability
+  max_vel_theta: 0.5  #   机器人的最大角速度的绝对值，单位为 rad/s (default: 1.0)   choose slightly less than the base's capability
   min_vel_theta: 0.1  #  机器人的最小角速度的绝对值，单位为 rad/s (default: 0.4)   this is the min angular velocity when there is negligible translational velocity
   theta_stopped_vel: 0.1  #   机器人被认属于“停止”状态时的旋转速度。单位为 rad/s
   
