@@ -18,6 +18,7 @@
 #include "tf/tf.h"
 #include "fcntl.h"
 #include "boost/thread.hpp"
+#include "qingzhou_bringup/app.h"
 #define SERVER_IP "127.0.0.1"
 #define PORT 6666
 
@@ -29,12 +30,15 @@ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseAc
 enum TRAFFICLIGHT{red = 0,green = 1,yellow = 0};
 
 enum GOALSTATE{lost = 0,active = 1,reach = 2 ,aborted = 3};
-enum ROBOTLOCATION{load,loadingtotfl,tfltounload,unload,tfl,unloadtoload,start,starttoload,unknow};
+enum ROBOTLOCATION{load,loadingtotfl,tfltounload,unload,tfl,unloadtoload,start,starttoload,unknow,unloadtoroadline,roadline,unloadtostart,roadlineout};
 
 typedef struct RobotState
 {
     GOALSTATE goalstate;
     ROBOTLOCATION robotlocation;
+    bool inRoadLine;
+    bool roadLineOut;
+    float roadLinePianyi;
 }robotstate;
 
 typedef struct RobotControlMsg //ros 发送过来的消息结构体
@@ -91,8 +95,13 @@ private:
     ros::Subscriber locationSuber;
     ros::Subscriber ekfPoseSuber;
     ros::Subscriber trafficLightSuber;
+    ros::Subscriber pianyiSuber;
+
+
 
     robotstate robotState; 
+
+    
 
 public:
     TCP_Sender(const ros::NodeHandle &nodeHandler);
@@ -101,21 +110,30 @@ public:
     rsm robotStatusMsg;
     bool haveDetectedTfl;
     ros::Duration sleepDur;
-
+    bool haveDetectRL;//是否检测到车道线 用于在进行过程中更改目标点
     MoveBaseActionClient * moveBaseActionClientPtr;
-
+    float pianyibefore;
     move_base_msgs::MoveBaseGoal startPoint;
     move_base_msgs::MoveBaseGoal getGoodsPoint;
     move_base_msgs::MoveBaseGoal throwGoodsPoint;
     move_base_msgs::MoveBaseGoal userPoint;
     move_base_msgs::MoveBaseGoal trafficLightStopLine;
+    move_base_msgs::MoveBaseGoal lineStart;
+
+
+    std_msgs::String linePianyi;
     
     ros::Publisher cmdvelPuber;
+    ros::Publisher roadlineControlPuber;//用于发布视觉是否接手控制已经改成了使用服务的方法发送
+
+    ros::ServiceClient visioncontrolclient;
+
     void SubBettaryInfoCB(const std_msgs::Float32::ConstPtr &msg);
     void SubSpeedCB(const geometry_msgs::Twist::ConstPtr &msg);
     void SubLocCB(const nav_msgs::Odometry::ConstPtr &msg);
     void SubEkfPoseCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
-    void SubTrafficLightCB(const std_msgs::Float32ConstPtr &msg);
+    void SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg);
+    void SubLineCB(const  geometry_msgs::Vector3::ConstPtr &msg);
 
     void GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr &result);
 
@@ -129,6 +147,10 @@ public:
 
     bool ConvertToUnlocked();
     bool RetriveMsg(void * buff, size_t buffSize);
+    //车道线控制函数
+    void roadLineControl();
+
+    // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
 
 };
 

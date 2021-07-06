@@ -66,7 +66,7 @@
   <depend>nav_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>boost</depend>
-
+  <exec_depend>message_runtime</exec_depend>
     <build_depend>cv_bridge</build_depend>
   <build_depend>image_transport</build_depend>
   <build_depend>sensor_msgs</build_depend>

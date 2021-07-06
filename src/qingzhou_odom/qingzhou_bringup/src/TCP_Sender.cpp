@@ -7,13 +7,20 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel",50,&TCP_Sender::SubSpeedCB,this);//速度
     locationSuber = nh.subscribe<nav_msgs::Odometry>("/odom",50,&TCP_Sender::SubLocCB,this);//odom
     ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);//ekf
-    trafficLightSuber = nh.subscribe<std_msgs::Float32>("/color",5,&TCP_Sender::SubTrafficLightCB,this);;//红绿灯
+    trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
+    pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubLineCB,this);
+    visioncontrolclient = nh.serviceClient<qingzhou_bringup::app>("/vision_control");
+
     robotState.goalstate = lost;
     robotState.robotlocation = start;
+    robotState.inRoadLine = false;
+    robotState.roadLineOut = false;
+    pianyibefore = 0;
     haveDetectedTfl = false;
     sleepDur = ros::Duration(1);
     std::cout<<"creatededed"<<std::endl;
     cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",50);
+    // roadlineControlPuber = nh.advertise<std_msgs::Float32>("/is_version_cont",10);
 
     moveBaseActionClientPtr = new MoveBaseActionClient("move_base");
     ROS_INFO("wait for movebase action server");
@@ -22,12 +29,20 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 
     //初始化停止线的位置
     trafficLightStopLine.target_pose.header.frame_id = "map";
-    trafficLightStopLine.target_pose.pose.position.x = 2.289;
-    trafficLightStopLine.target_pose.pose.position.y = -6.894;
+    trafficLightStopLine.target_pose.pose.position.x = 2.260;
+    trafficLightStopLine.target_pose.pose.position.y = -6.291;
     trafficLightStopLine.target_pose.pose.orientation.x = 0.000;
     trafficLightStopLine.target_pose.pose.orientation.y = 0.000;
-    trafficLightStopLine.target_pose.pose.orientation.z = -0.7;
-    trafficLightStopLine.target_pose.pose.orientation.w = 0.714;
+    trafficLightStopLine.target_pose.pose.orientation.z = -0.691;
+    trafficLightStopLine.target_pose.pose.orientation.w = 0.723;
+
+    lineStart.target_pose.header.frame_id = "map";
+    lineStart.target_pose.pose.position.x = 1.026;
+    lineStart.target_pose.pose.position.y = -3.7500;
+    lineStart.target_pose.pose.orientation.x = 0.000;
+    lineStart.target_pose.pose.orientation.y = 0.000;
+    lineStart.target_pose.pose.orientation.z = 0.746;
+    lineStart.target_pose.pose.orientation.w = 0.666;
     
     
     
@@ -39,6 +54,11 @@ TCP_Sender::~TCP_Sender()
     delete moveBaseActionClientPtr;
 }
 
+
+// bool TCP_Sender::RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res)
+// {
+
+// }
 
 void TCP_Sender::SubBettaryInfoCB(const std_msgs::Float32::ConstPtr &msg)
 {
@@ -63,6 +83,104 @@ void TCP_Sender::SubEkfPoseCB(const geometry_msgs::PoseWithCovarianceStamped::Co
     robotStatusMsg.ekfX = msg.get()->pose.pose.position.x;
     robotStatusMsg.ekfY = msg.get()->pose.pose.position.y;
 }
+void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
+{
+    // linePianyi = msg.get();
+    // if(xxxxx)
+    // {
+    //     robotState.roadLinePianyi = msg.get();
+    // }
+    float pianyi = (msg.get()->y);
+    // ROS_INFO_STREAM("pianyi "<<pianyi);
+    if(robotState.inRoadLine)
+    {
+        
+        if(int(pianyi))
+        {
+            // ROS_INFO("get pinayi");
+            // haveDetectedTfl = true;
+            robotState.roadLinePianyi = pianyi;
+            ROS_INFO_STREAM("pianyi "<<pianyi);
+            if(pianyi >998){
+            
+                //如果车在车道线里面，并且检测不到车道线，才判断location在roadlineout
+                ROS_INFO("===================pianyi > 998 =================");
+                if(robotState.robotlocation == roadline)
+                {
+                    ROS_INFO("*********************out road line*****************8");
+                    // while(1);
+
+
+                    qingzhou_bringup::app req;
+                    req.request.statue = 2;
+                    if(visioncontrolclient.call(req))
+                    {
+                        ROS_INFO("call vision stop success");
+
+
+                        // std_msgs::Float32 data;
+                        // data.data = 2;
+                        // roadlineControlPuber.publish(data);
+
+                        
+                        // robotState.roadLineOut = true;
+                        robotState.robotlocation = roadlineout;
+                        robotState.inRoadLine = false;
+                        // haveDetectedTfl = false; // ？？？G干嘛的
+                        qingzhou_bringup::app req;
+                        req.request.statue = 0;
+                        if(visioncontrolclient.call(req))
+                        {
+                            //say something
+                        }
+                    }
+                    else
+                    {
+                        ROS_INFO("call vision stop failed");
+                    }
+                }
+                
+            }
+        }
+        else{
+            ROS_INFO_STREAM("pianyi "<<pianyi);
+            //pass
+            ROS_INFO("*********************out road line*****************8");
+        
+            if( ( ( pianyi == 0))){
+                    ROS_INFO("*********************out road line*****************8");
+                    // while(1);
+                    qingzhou_bringup::app req;
+                    req.request.statue = 2;
+                    if(visioncontrolclient.call(req))
+                    {
+                        std_msgs::Float32 data;
+                        data.data = 2;
+                        // roadlineControlPuber.publish(data);
+                        // robotState.roadLineOut = true;
+                        robotState.robotlocation = roadlineout;
+                        // haveDetectedTfl = false;
+                        robotState.inRoadLine = false;
+
+                        ROS_INFO("call vision stop success");
+                        qingzhou_bringup::app req;
+                        req.request.statue = 0;
+                        if(visioncontrolclient.call(req))
+                        {
+                            //say something
+                        }
+                    }
+                    else
+                    {
+                        ROS_INFO("call vision stop failed");
+                    }
+
+            }
+            // haveDetectedTfl = false;
+        }
+    }
+    pianyibefore = pianyi;
+}
 
 
 //目标点完成的回调函数用于更改robotState.goalstate
@@ -71,6 +189,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
     ROS_INFO("Finished in state [%s]", state.toString().c_str());
     std::cout<<"i am in call back funciton"<<std::endl;
     //ROS_INFO("Answer: %i", result->sequence.back());
+    //出发点-转载点 -> 装载点； 装载点-交通灯 -> 交通灯； 交通灯-卸货点 -> 卸货点； 卸货点-车道线出发点 -> 车道线出发点 ->
     if(state == actionlib::SimpleClientGoalState::SUCCEEDED)
     {
         haveDetectedTfl = false;
@@ -87,15 +206,29 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
             robotState.robotlocation = unload;
             break;
         }
+        //废弃
         case unloadtoload:
         {
             robotState.robotlocation = load;
+            break;
+        }
+        //当前使用
+        case unloadtostart:
+        {
+            robotState.robotlocation = start;
             break;
         }
         case loadingtotfl:
         {
             robotState.robotlocation = tfl;
         
+            break;
+        }
+        case unloadtoroadline:
+        {
+            ROS_INFO("change unloadtoroadline to roadline and inroadline set true");
+            robotState.robotlocation = roadline;
+
             break;
         }
         default:
@@ -113,29 +246,34 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
     
 }
 void TCP_Sender::GoalActiveCB()
-{
+{   
     std::cout<<"i am in goal active callback function"<<std::endl;
 }
 
-void TCP_Sender::SubTrafficLightCB(const std_msgs::Float32ConstPtr &msg)
+void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
 {
-    robotStatusMsg.trafficLight = (int)(msg.get()->data);
-    if(!haveDetectedTfl)
+    robotStatusMsg.trafficLight = (int)(msg.get()->x);
+    // ROS_INFO_STREAM("tfl data: "<<robotStatusMsg.trafficLight);
+    if(!haveDetectedTfl)//如果还没还没有检测到交通灯，那就执行下面的程序，检测话题值
     {
-        if((int)(msg.get()->data) == red && robotState.robotlocation != tfl)
+
+        if(robotStatusMsg.trafficLight == 666 && robotState.robotlocation != tfl)//如果是红灯，而且机器人当前的位置不在停止线那就前往停止线等待绿灯
         {
             ROS_INFO_STREAM("red");
             haveDetectedTfl = true;//保证只能检测到一次红绿灯，防止频繁更改目标点，当到达下一个目标点的时候才释放红绿灯检测权
             //change goal to stop line
             //boost::thread actionGoalThread(this->moveBaseActionClientPtr->sendGoal,this->moveBaseActionClientPtr,)
             
+
+            //发送前往停止线的命令
             this->moveBaseActionClientPtr->sendGoal(trafficLightStopLine, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.goalstate = active;
             robotState.robotlocation = loadingtotfl;
             ROS_INFO("going to tfl");
             ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
         }
-        if((int)(msg.get()->data) == green)
+
+        if(robotStatusMsg.trafficLight == 777 ||robotStatusMsg.trafficLight == 888 )//如果是绿灯，不管车在哪里都直接前往下一个目标点
         {
             ROS_INFO_STREAM("green");
             //change goal to next postioin
@@ -153,12 +291,18 @@ void TCP_Sender::SubTrafficLightCB(const std_msgs::Float32ConstPtr &msg)
 
 void TCP_Sender::RunGoal()
 {
+    //如果成功到达某个目标点那就前往下一个目标点
+    //出发点 -> 装载点 -> 交通灯停止线 -> （由话题回调函数控制，在交通灯停止线等待绿灯） -> 卸载区 ->
+    //(车道线 -> 发送请求视觉控制 ->（若请求成功则开始检测是否退出车道线） -> 车道线外面: 这个过程中状态都是reach) -> 出发点
+    // ROS_INFO_STREAM("run goal state:"<<robotState.goalstate);
     if(robotState.goalstate == reach)//成功到达某个目标点
     {
+        // ROS_INFO_STREAM("reach:");
         switch (robotState.robotlocation)
         {
         case start:
         {
+            //前往getGood point
             moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.robotlocation = starttoload;
             robotState.goalstate = active;
@@ -175,13 +319,57 @@ void TCP_Sender::RunGoal()
         }
         case unload:
         {
-            moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = unloadtoload;
+            // moveBaseActionClientPtr->sendGoal(startPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            // robotState.robotlocation = unloadtostart;
+            // robotState.goalstate = active;
+            // ROS_INFO("going to start");
+            // ROS_INFO_STREAM("GOAL: x:"<<startPoint.target_pose.pose.position.x<<" y:"<<startPoint.target_pose.pose.position.y<<" z:"<<startPoint.target_pose.pose.orientation.z);
+            moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = unloadtoroadline;
             robotState.goalstate = active;
-            ROS_INFO("going to load");
-            ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
+            ROS_INFO("going to roadline");
+            ROS_INFO_STREAM("GOAL: x:"<<startPoint.target_pose.pose.position.x<<" y:"<<startPoint.target_pose.pose.position.y<<" z:"<<startPoint.target_pose.pose.orientation.z);
+            
             break;
         }
+        case roadlineout:
+        {
+            ROS_INFO_STREAM("road line out and  to start and location is "<<robotState.robotlocation);
+            //退出车道线之后重新回到unloadtostart的目标轨迹中
+            moveBaseActionClientPtr->sendGoal(startPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = unloadtostart;
+            robotState.goalstate = active;
+            ROS_INFO("going to start");
+            ROS_INFO_STREAM("GOAL: x:"<<startPoint.target_pose.pose.position.x<<" y:"<<startPoint.target_pose.pose.position.y<<" z:"<<startPoint.target_pose.pose.orientation.z);
+            break;
+        }
+        case roadline:
+        {
+            //视觉接管控制
+            // ROS_INFO("in road line");
+            if(!robotState.inRoadLine){
+                
+                // roadLineControl();
+
+                // std_msgs::Float32 data;
+                // data.data = 1;
+                // roadlineControlPuber.publish(data);
+                qingzhou_bringup::app req;
+                req.request.statue = 1;
+                if(visioncontrolclient.call(req))
+                {
+                    robotState.inRoadLine=true;//神经网络接手控制
+                    ROS_INFO("call vison control service success!");
+                }
+                else
+                {
+                    ROS_INFO("call vison control service failed!");
+                }
+
+            }
+            break;
+        }
+
         
         default:
         {
@@ -191,6 +379,7 @@ void TCP_Sender::RunGoal()
     }
     else if(robotState.goalstate == aborted) //如果目标在中途异常停止
     {
+        // ROS_INFO_STREAM("abort:");
         switch (robotState.robotlocation)
         {
         case starttoload:
@@ -230,14 +419,47 @@ void TCP_Sender::RunGoal()
             ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
             break;
         }
+        case unloadtoroadline:{
+            moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = unloadtoroadline;
+            robotState.goalstate = active;
+            ROS_INFO("going to roadline");
+            ROS_INFO_STREAM("GOAL: x:"<<lineStart.target_pose.pose.position.x<<" y:"<<lineStart.target_pose.pose.position.y<<" z:"<<lineStart.target_pose.pose.orientation.z);
+            break;
+        }
+        case unloadtostart:{
+            moveBaseActionClientPtr->sendGoal(startPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = unloadtostart;
+            robotState.goalstate = active;
+            ROS_INFO("going to start");
+            ROS_INFO_STREAM("GOAL: x:"<<startPoint.target_pose.pose.position.x<<" y:"<<startPoint.target_pose.pose.position.y<<" z:"<<startPoint.target_pose.pose.orientation.z);
+            break;
+        }
         default:
         {
             break;
         }
         }
     }
+    else if(robotState.goalstate == active)
+    {
+        //正在执行goal
+        //检测道路线
+
+        //这边是变前进变检测车道线，不太稳定，已经改成了前往车道线出发点的方法
+        // ROS_INFO_STREAM("active:");
+        if(false)//if havedetectedRL
+        {
+            moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.robotlocation = unloadtoroadline;
+            robotState.goalstate = active;
+            ROS_INFO("detect road line firstly and chanage goal to go to roadline");
+            ROS_INFO_STREAM("GOAL: x:"<<lineStart.target_pose.pose.position.x<<" y:"<<lineStart.target_pose.pose.position.y<<" z:"<<lineStart.target_pose.pose.orientation.z);
+        }
+    }
     else if(robotState.goalstate == lost)
     {
+        ROS_INFO("set goal going to load");
         moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2),boost::bind(&TCP_Sender::GoalActiveCB,this));
         robotState.goalstate = active;
         robotState.robotlocation = starttoload;
@@ -346,4 +568,15 @@ bool TCP_Sender::RetriveMsg(void *buff,size_t buffSize)//从sicket取回信息
         std::cout<<"log: retrive "<<err<<" bytes"<<std::endl;
         return true;
     }
+}
+
+void TCP_Sender::roadLineControl()
+{
+    float k = 0.80837;//系数
+    float b = 3.48970;
+    float angle = robotState.roadLinePianyi*k + b;
+    geometry_msgs::Twist cmdData;
+    cmdData.linear.x = 0.3;
+    cmdData.angular.z = angle/180*3.1415926;
+    cmdvelPuber.publish(cmdData);     
 }

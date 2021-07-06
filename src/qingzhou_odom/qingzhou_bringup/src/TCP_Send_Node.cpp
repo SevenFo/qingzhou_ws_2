@@ -74,13 +74,16 @@ int main(int argc, char **  argv)
     ros::Rate rate(50);
     ros::Duration dsleep(5);
     tcpsender = new TCP_Sender(nh);
-    if(tcpsender->SocketInit())
+    if(tcpsender->SocketInit()) //暂时注释
+    // if(true)
     {
-        timer.start();
+        timer.start(); //暂时注释
 
         while(ros::ok())
         {
             ros::spinOnce();
+
+   
             if(tcpsender->RetriveMsg(&robotControlMsg,sizeof(robotControlMsg)))
             {
 
@@ -160,9 +163,15 @@ int main(int argc, char **  argv)
                 //处理接受到的控制消息
 
             }
+
+
             // if(curruentGoal)//如果开始执行目标点
             // {
 
+            // }
+            // if(tcpsender->haveDetectedTfl)
+            // {
+            //     tcpsender->roadLineControl();
             // }
             //std::cout<<"goal state:"<<tcpsender->moveBaseActionClientPtr->getState().toString()<<std::endl;
             if(acitonSetedGoal)
@@ -170,6 +179,7 @@ int main(int argc, char **  argv)
             rate.sleep();
 
         }
+        
     }
     else
     {
