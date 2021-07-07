@@ -9,74 +9,19 @@ void TimerCB(const ros::TimerEvent &e)
    // std::cout<<"log :clocked"<<std::endl;
 }
 
-// bool checkGoal(actionlib::SimpleClientGoalState actionResult)
-// {
-//     if(actionResult != actionlib::SimpleClientGoalState::SUCCEEDED)
-//     {
-//         ROS_INFO("exec goal failed stop run goal");
-//         curruentGoal = 0;
-//     }
-//     else
-//     {
-//         ROS_INFO("move to next goal");
-//         curruentGoal += 1;
-//         if(curruentGoal == 4)
-//             curruentGoal = 2;
-//     }
-// }
-
-// bool runGoal(int goal = curruentGoal)
-// {
-//     switch((goal))
-//     {
-//         case 1:
-//         {
-//             ROS_INFO("Excuating goal");
-//             tcpsender->startPoint.target_pose.header.stamp = ros::Time::now();
-//             tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->startPoint);
-//             ROS_INFO("waiting for action result");
-//             tcpsender->moveBaseActionClientPtr->waitForResult();
-//             checkGoal(tcpsender->moveBaseActionClientPtr->getState());
-//             break;
-//         }
-//         case 2:
-//         {
-//             ROS_INFO("Excuating goal");
-//             tcpsender->getGoodsPoint.target_pose.header.stamp = ros::Time::now();
-//             tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->getGoodsPoint);
-//             ROS_INFO("waiting for action result");
-//             tcpsender->moveBaseActionClientPtr->waitForResult();
-//             checkGoal(tcpsender->moveBaseActionClientPtr->getState());
-//             break;
-//         }
-//         case 3:
-//         {
-//             ROS_INFO("Excuating goal");
-//             tcpsender->throwGoodsPoint.target_pose.header.stamp = ros::Time::now();
-//             tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->throwGoodsPoint);
-//             ROS_INFO("waiting for action result");
-//             tcpsender->moveBaseActionClientPtr->waitForResult();
-//             checkGoal(tcpsender->moveBaseActionClientPtr->getState());
-//             break;
-//         }
-//         default:
-//         {
-//             break;
-//         }
-//     }    
-// }
-
 int main(int argc, char **  argv)
 {
     ros::init(argc,argv,"TCP_Send_node");
     ros::NodeHandle nh("~");
-    ros::Timer timer = nh.createTimer(ros::Duration(0.5),TimerCB);
+    ros::Timer timer = nh.createTimer(ros::Duration(0.1),TimerCB);
     ros::Rate rate(50);
     ros::Duration dsleep(5);
     tcpsender = new TCP_Sender(nh);
+
     if(tcpsender->SocketInit()) //暂时注释
     // if(true)
     {
+        tcpsender->WaitServices();
         timer.start(); //暂时注释
 
         while(ros::ok())
@@ -126,16 +71,6 @@ int main(int argc, char **  argv)
                         ROS_INFO("Excuating user goal");
                         tcpsender->userPoint.target_pose.header.stamp = ros::Time::now();
                         tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->userPoint);
-                        // ROS_INFO("waiting for action result");
-                        // tcpsender->moveBaseActionClientPtr->waitForResult();
-                        // if(tcpsender->moveBaseActionClientPtr->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-                        // {
-                        //     ROS_INFO("reach user goal");
-                        // }
-                        // else
-                        // {
-                        //     ROS_INFO("unable to reach user goal");
-                        // }
                     }
                     case 0x04:
                     {
@@ -163,23 +98,13 @@ int main(int argc, char **  argv)
                 //处理接受到的控制消息
 
             }
-
-
-            // if(curruentGoal)//如果开始执行目标点
-            // {
-
-            // }
-            // if(tcpsender->haveDetectedTfl)
-            // {
-            //     tcpsender->roadLineControl();
-            // }
-            //std::cout<<"goal state:"<<tcpsender->moveBaseActionClientPtr->getState().toString()<<std::endl;
             if(acitonSetedGoal)
                 tcpsender->RunGoal();
             rate.sleep();
 
         }
-        
+        std::cout<<"quit TCP SEND NODE"<<std::endl;
+        tcpsender->CloseSocket();
     }
     else
     {
