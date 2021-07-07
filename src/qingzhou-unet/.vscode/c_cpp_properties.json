@@ -1,0 +1,40 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/cquer/vision_ws/devel/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/amcl/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/base_local_planner/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/carrot_planner/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/clear_costmap_recovery/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/costmap_2d/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/cqu_recovery/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/dwa_local_planner/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/global_planner/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_odom/imu_calibrate/imu_calib/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_odom/imu_tools/imu_complementary_filter/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_odom/imu_tools/imu_filter_madgwick/include/**",
+        "/home/cquer/vision_ws/src/jetson_camera-master/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/map_server/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/move_base/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/move_slow_and_clear/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/nav_core/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/navfn/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_odom/qingzhou_bringup/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_odom/robot_pose_ekf/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/rotate_recovery/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/teb_local_planner/include/**",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/src/voxel_grid/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}

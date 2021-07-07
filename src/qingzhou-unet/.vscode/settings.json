@@ -1,0 +1,8 @@
+{
+    "python.pythonPath": "C:\\Users\\broth\\anaconda3\\envs\\pytorch\\python.exe",
+    "python.autoComplete.extraPaths": [
+        "/home/cquer/vision_ws/devel/lib/python2.7/dist-packages",
+        "/home/cquer/ROSApplications/qingzhou_ws_2/devel/lib/python2.7/dist-packages",
+        "/opt/ros/melodic/lib/python2.7/dist-packages"
+    ]
+}
