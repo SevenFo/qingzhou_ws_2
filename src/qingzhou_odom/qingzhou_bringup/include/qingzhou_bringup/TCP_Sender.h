@@ -138,7 +138,7 @@ public:
     void GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr &result);
 
     void GoalActiveCB();
-
+    int outcount;
     bool SocketInit();
     bool SendMsg(const void* dataPtr,size_t dataSize);
     bool SendRobotStatusInfo();

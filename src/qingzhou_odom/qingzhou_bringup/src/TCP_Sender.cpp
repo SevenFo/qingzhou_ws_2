@@ -1,5 +1,5 @@
 #include "TCP_Sender.h"
-
+#include "math.h"
 TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 {
     nh = nodeHandler;//获取节点句柄
@@ -15,7 +15,8 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     robotState.robotlocation = start;
     robotState.inRoadLine = false;
     robotState.roadLineOut = false;
-    pianyibefore = 0;
+    pianyibefore = 1;
+    outcount = 0;
     haveDetectedTfl = false;
     sleepDur = ros::Duration(1);
     std::cout<<"creatededed"<<std::endl;
@@ -100,8 +101,8 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
             // ROS_INFO("get pinayi");
             // haveDetectedTfl = true;
             robotState.roadLinePianyi = pianyi;
-            ROS_INFO_STREAM("pianyi "<<pianyi);
-            if(pianyi >998){
+            ROS_INFO_STREAM("pianyi "<<pianyi<<" devid :"<<abs(pianyi - pianyibefore));
+            if(pianyi >998 || abs(pianyi - pianyibefore) >= abs(30)){//偏移跳变大于30判断退出赛道
             
                 //如果车在车道线里面，并且检测不到车道线，才判断location在roadlineout
                 ROS_INFO("===================pianyi > 998 =================");
@@ -147,34 +148,37 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
             //pass
             ROS_INFO("*********************out road line*****************8");
         
-            if( ( ( pianyi == 0))){
+            if( ( ( pianyi == 0 && pianyibefore == 0))){
                     ROS_INFO("*********************out road line*****************8");
                     // while(1);
-                    qingzhou_bringup::app req;
-                    req.request.statue = 2;
-                    if(visioncontrolclient.call(req))
-                    {
-                        std_msgs::Float32 data;
-                        data.data = 2;
-                        // roadlineControlPuber.publish(data);
-                        // robotState.roadLineOut = true;
-                        robotState.robotlocation = roadlineout;
-                        // haveDetectedTfl = false;
-                        robotState.inRoadLine = false;
-
-                        ROS_INFO("call vision stop success");
+                    outcount++;
+                    if(outcount == 3){//连续四次为0判断退出赛道
                         qingzhou_bringup::app req;
-                        req.request.statue = 0;
+                        req.request.statue = 2;
                         if(visioncontrolclient.call(req))
                         {
-                            //say something
-                        }
-                    }
-                    else
-                    {
-                        ROS_INFO("call vision stop failed");
-                    }
+                            std_msgs::Float32 data;
+                            data.data = 2;
+                            // roadlineControlPuber.publish(data);
+                            // robotState.roadLineOut = true;
+                            robotState.robotlocation = roadlineout;
+                            // haveDetectedTfl = false;
+                            robotState.inRoadLine = false;
 
+                            ROS_INFO("call vision stop success");
+                            qingzhou_bringup::app req;
+                            req.request.statue = 0;
+                            if(visioncontrolclient.call(req))
+                            {
+                                //say something
+                            }
+                        }
+                        else
+                        {
+                            ROS_INFO("call vision stop failed");
+                        }
+                        outcount = 0;
+                    }
             }
             // haveDetectedTfl = false;
         }
