@@ -1,8 +1,4 @@
 #-*- coding:utf-8 _*-
-"""
-@author:YuTao
-@time: 2019/07/01
-"""
 import numpy as np
 import cv2
 import cv2.aruco as aruco

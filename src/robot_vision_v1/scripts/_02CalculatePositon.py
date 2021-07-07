@@ -3,13 +3,13 @@
 import numpy as np
 import cv2
 import cv2.aruco as aruco
-
+import time
 dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_1000)  # 编码点的类型,与生成的时候对应
 K = np.array([[401.27, 0, 324.47],
               [0, 541.61,  286.99],
               [0, 0, 1]])
 Dis = np.array([0.305256, 0.077563, 0.003689, 0.000838])
-EMap = np.loadtxt('/home/cquer/vision_ws/src/robot_vision_v1/scripts/EMap.txt')
+EMap = np.loadtxt('/home/cquer/ROSApplications/qingzhou_ws_2/src/robot_vision_v1/scripts/EMap.txt')
 # MinusY = np.array([[0], [-1], [0.]])  # 相机坐标系Y轴负方向为小车方向
 # ZeroDirection = np.array([1,0.])            # 零角度的方向
 # 解算位姿的函数
@@ -46,7 +46,10 @@ def CalculatePositon(Point3D, Point2D, K, Dis):
 def DealMarker(Img):
 	CamPosition = None
 	MarkerROI = None
+	time1 = time.time()
 	Corners, IDs, rejectedImgPoints = aruco.detectMarkers(Img, dict)
+	time2 = time.time()
+	print("detectMarkers :{}".format(time2-time1))
 	# print(IDs)
 	# print(Corners)
 #	print(type(Corners[0]))
@@ -65,6 +68,7 @@ def DealMarker(Img):
 			cv2.putText(Img, str(CamPosition), (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 3)
 			MarkerROI = np.hstack((np.min(Point2D,axis=0),np.max(Point2D,axis=0))).astype(np.int)  # xmin,ymin,xmax,ymax
 	except Exception as e:
-		print "error in dealmarker"
-		print(e)
+		pass
+		# print "error in dealmarker"
+		# print(e)
 	return CamPosition, MarkerROI

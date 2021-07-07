@@ -2,19 +2,21 @@
 
 import cv2
 import numpy as np
+from numpy.core.fromnumeric import shape
 
-Red = np.array([38, 28, 230.])
+Red = np.array([115, 86, 232.])
 #Yellow = np.array([10, 100, 140.])
-Green = np.array([35, 128, 10.])
-
+Green = np.array([135, 200, 17.])
+yellow = np.array([236, 250, 28.])
+# Green = np.array([64, 145, 61.])
 # Red = np.array([38, 28, 230.])
 # Yellow = np.array([11, 81, 178.])
 # Green = np.array([35, 128, 10.])
 # Colors = (Red, Yellow, Green)
-Colors = (Red, Green)
+Colors = (Red, Green,yellow)
 # ColorsName = ('Red', 'Yellow', 'Green')
-ColorsName = ('Red', 'Green')
-DistThreshold =  10000   # 颜色距离阈值
+ColorsName = ('Red', 'Green1','Green2')
+DistThreshold =  5000   # 颜色距离阈值
 #DistThreshold =  2000   # 颜色距离阈值
 
 def JudgeLightColor(Light):
@@ -37,9 +39,13 @@ def TrafficLight(MarkerROI, Img):
 
 		# 提取亮点中心轮廓
 		LightImgGray = cv2.cvtColor(LightImg, cv2.COLOR_BGR2GRAY)
+		# cv2.imshow('1111', LightImgGray)
 		th, MaskImg = cv2.threshold(LightImgGray, 200, 255, cv2.THRESH_TOZERO)
+		# cv2.imshow('1111', MaskImg)
 		MaskImg = cv2.morphologyEx(MaskImg, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+		# cv2.imshow('1111', MaskImg)
 		contours, hierarchy = cv2.findContours(MaskImg, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+		
 		# a = cv2.findContours(MaskImg, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 		# print(a)
 		# exit()
@@ -57,12 +63,19 @@ def TrafficLight(MarkerROI, Img):
 				cv2.drawContours(MaskImg, [contour], -1, 255, cv2.FILLED)
 				kernel = np.ones((int(H / 8), int(H / 8)), np.uint8)
 				dilation = cv2.dilate(MaskImg, kernel, iterations=1)  # 膨胀
+				res = np.hstack((MaskImg, dilation))
+				# cv2.imshow('1111', res)
 				MaskImg = dilation - MaskImg
 				MaskImg = cv2.cvtColor(MaskImg, cv2.COLOR_GRAY2BGR)
 				OutSide = LightImg & MaskImg
+				# cv2.imshow('1111', OutSide)
+				# print (OutSide.shape)
 				Index = np.argwhere(np.sum(OutSide, axis=2) > 0)
+				# print(Index)
 				GrayLevel = OutSide[Index[:, 0], Index[:, 1], :]
+				# cv2.imshow('2222', GrayLevel)
 				Light = np.mean(GrayLevel, axis=0)
+				# print(Light)
 				Color, Dist = JudgeLightColor(Light)
 				if Dist < DistThreshold:    # 颜色空间L2距离足够小，完成颜色判断
 					LightColors.append(Color)
@@ -70,6 +83,6 @@ def TrafficLight(MarkerROI, Img):
 		# %% 显示交通灯小块区域
 		cv2.drawContours(LightImg, sel_contours, -1, (255, 0, 0), 3)
 		cv2.putText(Img, str([ColorsName[LightColor] for LightColor in LightColors]), (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 3)
-		cv2.imshow('LightImg', LightImg)
+		# cv2.imshow('LightImg', LightImg)
 		cv2.waitKey(15)
 	return LightColors

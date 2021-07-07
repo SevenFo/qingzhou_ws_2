@@ -20,9 +20,11 @@ def gstreamer_pipeline(
 		# capture_height=2464,
 		capture_width=1280,
 		capture_height=720,
-		display_width=640,
-		display_height=480,
-		framerate=21,
+		# display_width=640,
+		# display_height=480,
+		display_width=1920,
+		display_height=1080,
+		framerate=10,
 		flip_method=0,
 ):
 	return (
@@ -122,10 +124,10 @@ def detector():
 			pub_position.publish(tmpPosition)
 					#rate.sleep()
 			Img = cv2.resize(Img, (int(Img.shape[1] / 2), int(Img.shape[0] / 2)))
-			cv2.imshow('Video', Img)
-			key = cv2.waitKey(5)
-			if key != -1:
-				rospy.loginfo(" try to exit")
+			# cv2.imshow('Video', Img)
+			# key = cv2.waitKey(5)
+			# if key != -1:
+			# 	rospy.loginfo(" try to exit")
 				# exit()
 			# if CamPosition is not None:
 			# 	Point = ax.scatter(CamPosition[0], CamPosition[1], s=5)
