@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="qingzhou-unet" name="detector" type="_01PredictMain.py" output="screen">
+    </node>
+</launch>

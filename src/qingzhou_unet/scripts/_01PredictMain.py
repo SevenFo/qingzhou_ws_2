@@ -1,4 +1,5 @@
-# -*- coding:utf-8 _*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import os
 import cv2
 import numpy as np
@@ -64,26 +65,34 @@ K = np.array([[308.7962753712953, 0, 325.1614349338094],
               [0, 309.9281771981168, 278.8305865054944],
               [0, 0, 1]], dtype=np.float32)
 def line():
-    while(1):
-        
+    rospy.init_node("detector")
+    cmdData = Twist()
+    cmdpub = rospy.Publisher("/cmd_vel",Twist,queue_size=1)
+    # pianyi = line()
+    rospy.loginfo("detector node is started...")
+        # WarpedImg = cv2.resize(WarpedImg, (128, 128))
+        # cv2.imshow('WarpedImg',WarpedImg) #查看变换后的图像
+        # cv2.waitKey(1)
+    print("loading net...")
+    device = torch.device('cuda')
+    torch.cuda.set_device(0)  # 选用GPU设备
+    # 加载网络，图片单通道，分类为1。
+    # net = UNet(n_channels=1, n_classes=1)
+    net = UNet(in_channels=3, out_channels=1, init_features=4, WithActivateLast=True, ActivateFunLast=torch.sigmoid).to(device)
+    # 将网络拷贝到deivce中
+    net.to(device=device)
+    # 加载模型参数
+    net.load_state_dict(torch.load('/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_unet/scripts/0700_dict.pt', map_location='cuda'))
+
+    # 测试模式
+    net.eval()
+    print("loaded net")
+    while(not rospy.is_shutdown()):
+        time1 = time.time()
         ret,Img = ImgPaths.read()
         Img = cv2.resize(Img, (640, 480))
         UndistImg = cv2.undistort(Img, K, Dist)
         WarpedImg = cv2.warpPerspective(UndistImg, H, (1000, 1000)) #变换后的图像
-        # WarpedImg = cv2.resize(WarpedImg, (128, 128))
-        # cv2.imshow('WarpedImg',WarpedImg) #查看变换后的图像
-        # cv2.waitKey(1)
-        device = torch.device('cuda')
-        torch.cuda.set_device(0)  # 选用GPU设备
-        # 加载网络，图片单通道，分类为1。
-        # net = UNet(n_channels=1, n_classes=1)
-        net = UNet(in_channels=3, out_channels=1, init_features=4, WithActivateLast=True, ActivateFunLast=torch.sigmoid).to(device)
-        # 将网络拷贝到deivce中
-        net.to(device=device)
-        # 加载模型参数
-        net.load_state_dict(torch.load('../_04Training/Output/0700_dict.pt', map_location='cuda'))
-        # 测试模式
-        net.eval()
         # 读取图片
         b, g, r = cv2.split(WarpedImg)
         WarpedImg = cv2.merge([r, g, b])
@@ -98,11 +107,17 @@ def line():
         # img_tensor  = cv2.resize(img_tensor , (640, 480))
         # print(img_tensor.shape)
         img_tensor = img_tensor.reshape(1, 3, 128, 128)
+        time2 = time.time()
+        print("pred before: {}".format(time2-time1))
         # print(img_tensor.shape)
         # 预测
+        time1 = time.time()
         pred = net(img_tensor)
+        time2 = time.time()
+        print("pred: {}".format(time2-time1))
         # print(pred.shape)
         # 提取结果
+        time1  =time.time()
         pred = np.array(pred.data.cpu()[0])[0]
         # 处理结果
         # print(pred.shape)
@@ -138,11 +153,11 @@ def line():
         for i in range(num_lane_point):         # each detected point on the lane
             detect_height = 150 - (height - 13 - i*10) #随便写的数
             detect_row = img_out[detect_height]
-            line = np.where(detect_row == 255)  # extract zero pixel's index
-            # print(line)
-            if len(line[0]):                    # If this row has white pixels
-                left_pos = np.min(line[0])
-                right_pos = np.max(line[0])
+            line_line = np.where(detect_row == 255)  # extract zero pixel's index
+            # print(line_line)
+            if len(line_line[0]):                    # If this row has white pixels
+                left_pos = np.min(line_line[0])
+                right_pos = np.max(line_line[0])
             else:
                 # left_pos = 0
                 # right_pos = width - 1
@@ -159,11 +174,27 @@ def line():
                 control_num_1 = center[0] -64
                 print('control_num_1 = %d' %control_num_1)
             # if center[1] > 40 and center[1] < 50 and center_num >1: #前面第二个中心点还有没有值
+        time2 = time.time()
+        print("pred after: {}".format(time2-time1))
         if control_num_1 == 999 :
             print('out of the line!!!')
         else :
             print('going')
-        return  control_num_1
+
+        # 初始化ros节点
+
+        if(control_num_1 != 999):
+            print("vision controling...")
+            cmdData.linear.x = 0.2
+            cmdData.angular.z = -(control_num_1*1.1+0.9/180.0*3.1415926)
+            cmdpub.publish(cmdData)
+        else:
+            cmdData.linear.x = 0.0
+
+            cmdData.angular.z = 0.0
+            cmdpub.publish(cmdData)
+
+        
         
             
 
@@ -212,20 +243,5 @@ def line():
 
 
 if __name__ == "__main__":
-    cmdData = Twist()
-    cmdpub = rospy.Publisher("/cmd_vel",Twist)
-    pianyi = line()
-    try:
 
-        rospy.loginfo("detector node is started...")
-        while not rospy.is_shutdown():
-        # 初始化ros节点
-            rospy.init_node("detector")
-            if(pianyi != 999):
-                print("vision controling...")
-                cmdData.linear.x = 0.3
-                cmdData.angular.z = pianyi*1.4+0.9/180.0*3.1415926
-                cmdpub.publish(cmdData)
-    except rospy.ROSInitException:
-        print("close")
-    
+    line()

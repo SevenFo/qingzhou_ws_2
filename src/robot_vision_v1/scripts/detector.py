@@ -109,38 +109,6 @@ def detector(Img):
             # print(LightColors)
             colortype = LightColors[0]
             return colortype
-			# for i in LightColors:
-			# 	print(type(i))
-			# pub_color= rospy.Publisher('color', Float32, queue_size=10)
-			# # pub_position= rospy.Publisher('position',Vector3, queue_size=10)
-			# # rate = rospy.Rate(10)
-			# # while not rospy.is_shutdown():
-			# if(len(LightColors) > 0):
-			# 	print(LightColors)
-			# 	colortype = LightColors[0]
-            #     if colortype == 0 : #红灯
-    		# 		pub_color.publish(666)
-            #     if colortype == 1 : #绿灯1
-    		# 		pub_color.publish(777)
-            #     if colortype == 2 : #绿灯2
-    		# 		pub_color.publish(888)                
-			# else:
-			# 	print("havent detected traffic light and do not publish colortype")
-			# 	pub_color.publish(-100)
-			#colortype = ",".join('%s' %id for id in LightColors)
-			
-			# pub_position.publish(tmpPosition)
-					#rate.sleep()
-			# Img = cv2.resize(Img, (int(Img.shape[1] / 2), int(Img.shape[0] / 2)))
-			# cv2.imshow('Video', Img)
-			# key = cv2.waitKey(5)
-			# if key != -1:
-			# 	rospy.loginfo(" try to exit")
-				# exit()
-			# if CamPosition is not None:
-			# 	Point = ax.scatter(CamPosition[0], CamPosition[1], s=5)
-			# 	plt.pause(0.01)
-			# 	Point.remove()
     else:
         print('no image')
 
