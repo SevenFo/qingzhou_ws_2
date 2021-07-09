@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+      <node name="map_server" pkg="map_server" type="map_server" args="$(find qingzhou_nav)/maps/test_map_6.8.yaml" output="screen">
+        <param name="frame_id" value="map" />
+        </node>
+</launch>

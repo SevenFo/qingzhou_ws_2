@@ -22,6 +22,7 @@ int main(int argc, char **  argv)
     // if(true)
     {
         tcpsender->WaitServices();
+        tcpsender->ClearCostmapFirstly();
         timer.start(); //暂时注释
 
         while(ros::ok())

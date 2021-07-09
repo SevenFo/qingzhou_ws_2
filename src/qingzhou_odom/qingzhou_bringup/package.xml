@@ -73,7 +73,7 @@
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>image_transport</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
-
+  <depend>std_srvs</depend>
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>
 

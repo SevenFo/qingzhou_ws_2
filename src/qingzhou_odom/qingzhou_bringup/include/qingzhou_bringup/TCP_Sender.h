@@ -19,6 +19,7 @@
 #include "fcntl.h"
 #include "boost/thread.hpp"
 #include "qingzhou_bringup/app.h"
+#include "std_srvs/Empty.h"
 #define SERVER_IP "127.0.0.1"
 #define PORT 6666
 
@@ -94,6 +95,8 @@ private:
     ros::Subscriber pianyiSuber;
     ros::Duration sleepDur;
     ros::ServiceClient visioncontrolclient;
+    ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
+    ros::ServiceClient clearCostmapClient;//清除costmap
 
 
     robotstate robotState; 
@@ -139,9 +142,11 @@ public:
     void WaitServices()
     {
         ROS_INFO("wait for movebase action server");
-        moveBaseActionClientPtr->waitForServer();//等待服务
+        moveBaseActionClientPtr->waitForServer();//等待    服务
+        ROS_INFO("Ready!");
     }
     void StopVisonControl();//请求停止视觉控制
+    void ClearCostmapFirstly();//清除costmap firstly
 
     // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
 

@@ -7,8 +7,10 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler){
     locationSuber = nh.subscribe<nav_msgs::Odometry>("/odom",50,&TCP_Sender::SubLocCB,this);//odom
     ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);//ekf
     trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
-    pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubLineCB,this);
+    pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubLineCB,this);
     visioncontrolclient = nh.serviceClient<qingzhou_bringup::app>("/vision_control");
+    clearCostmapFirstlyClient = nh.serviceClient<std_srvs::Empty>("/clear_cost_map");
+    clearCostmapClient = nh.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
 
     robotState.goalstate = lost;
     robotState.robotlocation = start;
@@ -23,6 +25,8 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler){
     // roadlineControlPuber = nh.advertise<std_msgs::Float32>("/is_version_cont",10);
 
     moveBaseActionClientPtr = new MoveBaseActionClient("move_base");
+    ROS_INFO_NAMED("TCP_Sender", "Waiting services");
+    clearCostmapClient.waitForExistence();
 
     
 
@@ -102,6 +106,16 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
         if(robotStatusMsg.trafficLight == 777 ||robotStatusMsg.trafficLight == 888 )//如果是绿灯，不管车在哪里都直接前往下一个目标点
         {
             ROS_INFO_STREAM("green");
+            qingzhou_bringup::app req;
+            req.request.statue = 4;
+            if (visioncontrolclient.call(req))
+            {
+                ROS_INFO_NAMED("TCP_Sender", "closed color detector");
+            }
+            else
+            {
+                //todo
+            }
             //change goal to next postioin
             haveDetectedTfl = true;
             this->moveBaseActionClientPtr->sendGoal(throwGoodsPoint, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
@@ -126,7 +140,7 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
             // haveDetectedTfl = true;
             robotState.roadLinePianyi = pianyi;
             ROS_INFO_STREAM("pianyi "<<pianyi<<" devid :"<<abs(pianyi - pianyibefore));
-            if(pianyi >998 || abs(pianyi - pianyibefore) >= abs(30)){//偏移跳变大于30判断退出赛道
+            if(pianyi >998 ){//偏移跳变大于30判断退出赛道 不太好用 废弃了
                 //如果车在车道线里面，并且检测不到车道线，才判断location在roadlineout
                 if(robotState.robotlocation == roadline)
                 {
@@ -137,16 +151,16 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
         }
         else{
             ROS_INFO_STREAM("pianyi " << pianyi);
-            if (pianyi == 0 && pianyibefore == 0)
-            {
-                ROS_INFO("*********************out road line*****************8");
-                // while(1);
-                outcount++;
-                if(outcount == 3){//连续四次为0判断退出赛道
-                    StopVisonControl();
-                    outcount = 0;
-                }
-            }
+            // if (pianyi == 0 && pianyibefore == 0)
+            // {
+            //     ROS_INFO("*********************out road line*****************8");
+            //     // while(1);
+            //     outcount++;
+            //     if(outcount == 8){//连续四次为0判断退出赛道
+            //         StopVisonControl();
+            //         outcount = 0;
+            //     }
+            // }
             // haveDetectedTfl = false;
         }
     }
@@ -155,19 +169,44 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
 
 
 //目标点完成的回调函数用于更改robotState.goalstate
-void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr &result)
+void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr& result)
 {
     ROS_INFO("Finished in state [%s]", state.toString().c_str());
-    std::cout<<"i am in call back funciton"<<std::endl;
-    //ROS_INFO("Answer: %i", result->sequence.back());
-    //出发点-转载点 -> 装载点； 装载点-交通灯 -> 交通灯； 交通灯-卸货点 -> 卸货点； 卸货点-车道线出发点 -> 车道线出发点 ->
-    if(state == actionlib::SimpleClientGoalState::SUCCEEDED)
+
+    std::cout << "i am a goal done cb" << std::endl;
+
+    std_srvs::Empty req;
+    if (clearCostmapClient.call(req)) {
+        ROS_INFO_NAMED("TCP_Sender", "clear cost map success!");
+    }
+    else
     {
+        ROS_INFO_NAMED("TCP_Sender", "clear cost map failed!");
+    }
+
+    //ROS_INFO("Answer: %i", result->sequence.back());
+    //出发点-转载点 -> 装载点； 装载点 - 交通灯->交通灯； 交通灯 - 卸货点->卸货点； 卸货点 - 车道线出发点->车道线出发点 ->
+    if (state == actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+        
         haveDetectedTfl = false;
         robotState.goalstate = reach;
         switch (robotState.robotlocation)
         {
-        case starttoload:{robotState.robotlocation = load;break;}
+        case starttoload: {
+            robotState.robotlocation = load;
+            qingzhou_bringup::app req;
+            req.request.statue = 3;
+            if (visioncontrolclient.call(req))
+            {
+                ROS_INFO_NAMED("RCP_Sender", "open color detector");
+            }
+            else
+            {
+                //todo
+            }
+            break;
+            }
         case tfltounload:{robotState.robotlocation = unload;break;}
         //废弃
         case unloadtoload:{robotState.robotlocation = load;break;}
@@ -178,6 +217,16 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
         {
             ROS_INFO("change unloadtoroadline to roadline and inroadline set true");
             robotState.robotlocation = roadline;
+            qingzhou_bringup::app req;
+            req.request.statue = 1;
+            if (visioncontrolclient.call(req))
+            {
+                ROS_INFO_NAMED("TCP_Sender", "open roadline detector");
+            }
+            else
+            {
+                //todo
+            }
             robotStatusMsg.roadlineStatus = 1;
             break;
         }
@@ -189,7 +238,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
         robotState.goalstate = aborted;
     }
     std::cout<<"goal state change to "<<robotState.goalstate << " and now location is "<<robotState.robotlocation<<std::endl;
-    
+
 }
 void TCP_Sender::GoalActiveCB()
 {   
@@ -524,4 +573,18 @@ void TCP_Sender::StopVisonControl()
     {
         ROS_INFO("call vision stop failed");
     }
+}
+
+void TCP_Sender::ClearCostmapFirstly() {
+    std_srvs::Empty req;
+    clearCostmapFirstlyClient.waitForExistence();
+    if (clearCostmapFirstlyClient.call(req))
+    {
+        ROS_INFO_NAMED("TCP_Sender", "Clear Costmap success!");
+    }
+    else
+    {
+        ROS_INFO_NAMED("TCP_Sender", "Clear Costmap failed!");
+    }
+
 }
