@@ -10,7 +10,7 @@ controller_frequency: 10
 obstacle_layer:                #   配置障碍物图层
   enabled:        true         #   是否启用该层      true
   combination_method:   1      #只能设置为0或1，用来更新地图上的代价值，一般设置为1
-  track_unknown_space:  true  #如果设置为false，那么地图上代价值就只分为致命碰撞和自由区域两种，如果设置为true，那么就分为致命碰撞，自由区域和未知区域三种。
+  track_unknown_space:  false  #如果设置为false，那么地图上代价值就只分为致命碰撞和自由区域两种，如果设置为true，那么就分为致命碰撞，自由区域和未知区域三种。
                                #意思是说假如该参数设置为true的话，就意味着地图上的未知区域也会被认为是可以自由移动的区域，这样在进行全局路径规划时，
                                #可以把一些未探索的未知区域也来参与到路径规划，如果你需要这样的话就将该参数设置为false。不过一般情况未探索的区域不应该当作可以自由移动的区域，因此一般将该参数设置为true
   origin_z: 0.0

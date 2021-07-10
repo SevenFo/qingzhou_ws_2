@@ -81,7 +81,7 @@ Costmap2DROS::Costmap2DROS(const std::string& name, tf2_ros::Buffer& tf) :
   // Initialize old pose with something
   tf2::toMsg(tf2::Transform::getIdentity(), old_pose_.pose);
 
-  ros::NodeHandle private_nh("~/" + name);
+  ros::NodeHandle private_nh("~/" + name);//区分开不同的地图参数
   ros::NodeHandle g_nh;
 
   // get global and robot base frame names

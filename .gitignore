@@ -4,3 +4,10 @@
 /devel
 /build_bcl
 /devel_bcl
+costcommom.yaml
+globalcostmap.yaml
+globalplanner.yaml
+localplanner.yaml
+old_dwa.yaml
+old_dwa2.yaml
+src/qingzhou_nav/config/costmap_params_.yaml

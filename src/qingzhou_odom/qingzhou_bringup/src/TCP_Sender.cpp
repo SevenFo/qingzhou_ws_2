@@ -5,6 +5,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler){
     bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",5,&TCP_Sender::SubBettaryInfoCB,this);//电池电量
     speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel",50,&TCP_Sender::SubSpeedCB,this);//速度
     locationSuber = nh.subscribe<nav_msgs::Odometry>("/odom",50,&TCP_Sender::SubLocCB,this);//odom
+    locationInMapSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/amcl_pose",50,&TCP_Sender::SubLcationMapCB,this);//odom
     ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);//ekf
     trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
     pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubLineCB,this);
@@ -44,8 +45,8 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler){
     lineStart.target_pose.pose.position.y = -3.7500;
     lineStart.target_pose.pose.orientation.x = 0.000;
     lineStart.target_pose.pose.orientation.y = 0.000;
-    lineStart.target_pose.pose.orientation.z = 0.746;
-    lineStart.target_pose.pose.orientation.w = 0.666;
+    lineStart.target_pose.pose.orientation.z = 0.6862315947380534;
+    lineStart.target_pose.pose.orientation.w = 0.7273831166471133;
     
     
     
@@ -79,6 +80,11 @@ void TCP_Sender::SubEkfPoseCB(const geometry_msgs::PoseWithCovarianceStamped::Co
 
     robotStatusMsg.ekfX = msg.get()->pose.pose.position.x;
     robotStatusMsg.ekfY = msg.get()->pose.pose.position.y;
+}
+void TCP_Sender::SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
+{
+    robotStatusMsg.locationInMapY = msg.get()->pose.pose.position.y;
+    robotStatusMsg.locationInMapX = msg.get()->pose.pose.position.x;
 }
 void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
 {
@@ -178,6 +184,13 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
     std_srvs::Empty req;
     if (clearCostmapClient.call(req)) {
         ROS_INFO_NAMED("TCP_Sender", "clear cost map success!");
+        //在转角的时候路径规划没有考虑障碍物？
+        ROS_INFO_NAMED("TCP_Sender", "Sleep for 0.8 second,(wait costmap to update)");
+        sleepDur = ros::Duration(0.8);
+        sleepDur.sleep();
+        ROS_INFO_NAMED("TCP_Sender", "Weak up(wait costmap to update)");
+
+
     }
     else
     {
@@ -587,4 +600,64 @@ void TCP_Sender::ClearCostmapFirstly() {
         ROS_INFO_NAMED("TCP_Sender", "Clear Costmap failed!");
     }
 
+}
+
+void TCP_Sender::_PrintCurruentLocation() {
+    switch (robotState.robotlocation)
+    {
+    case  load: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 装货区");
+    break;
+    }
+    case loadingtotfl: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 装货区到红绿灯停止线的途中");break;}
+    case tfltounload: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 红绿灯停止线到卸货区的途中");break;}
+    case unload: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 卸货区");break;}
+    case tfl: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 红绿灯停止线");break;}
+    case start: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 起始区");break;}
+    case starttoload:{ROS_INFO_NAMED("TCP_Sender","TCP_Sender:Curruent location is 起始区到装货区的途中");break;}
+    case unknow: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 未知");break;}
+    case unloadtoroadline: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 卸货区到车道线开始点的途中");break;}
+    case roadline: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 车道线");break;}
+    case unloadtostart: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 卸货区到起始区的途中");break;}
+    case roadlineout: {ROS_INFO_NAMED("TCP_Sender", "TCP_Sender:Curruent location is 车道线外面");break;}
+    default:
+        break;
+    }
+}    
+
+std::string TCP_Sender::_EmumTranslator(ROBOTLOCATION value){
+    if (typeid(value) == typeid(ROBOTLOCATION)) {
+        switch (robotState.robotlocation)
+        {
+        case  load: 
+        {
+            return "装货区";
+            break;
+        }                  
+        case loadingtotfl: {return "装货区到红绿灯停止线的途中";break;}
+        case tfltounload: {return "红绿灯停止线到卸货区的途中" ;break;}
+        case unload: {return "卸货区";break;}
+        case tfl: {return "红绿灯停止线";break;}
+        case start: {return "起始区";break;}
+        case starttoload: {return "起始区到装货区的途中";break;}
+        case unknow:{return "未知";break;}
+        case unloadtoroadline: {return "卸货区到车道线开始点的途中";break;}
+        case roadline: {return "车道线";break;}
+        case unloadtostart: {return "卸货区到起始区的途中";break;}
+        case roadlineout: {return "车道线外面";break;}
+        default:
+            break;
+        }
+    }
+    else if(typeid(value) == typeid(int))
+    {
+        // switch (expression)
+        // {
+        // case /* constant-expression */:
+        //     /* code */
+        //     break;
+        
+        // default:
+        //     break;
+        // }
+    }
 }

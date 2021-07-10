@@ -159,31 +159,30 @@ def pianyi_detect(img):
     # cv2.imshow("gray",gray_img) #查看转化后的灰度图
     # cv2.waitKey(5)
     ret, img_thresh = cv2.threshold(gray_img,10, 255, cv2.THRESH_BINARY)  #大于10的地方就转化为白色255，返回两个值第一个是域值，第二个是二值图图像
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4)) #返回一个4*4的椭圆形矩阵核，椭圆的地方是1，其他地方是0
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)) #返回一个4*4的椭圆形矩阵核，椭圆的地方是1，其他地方是0
     img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel) #开运算，运用核kernel先进行腐蚀，再进行膨胀
     img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel) #闭运算，运用核kernel先进行膨胀，再进行腐蚀
     # cv2.imshow("img_thresh",img_thresh) #开闭运算后的图像
     # cv2.waitKey(5)
-    contours, hierarchy = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) #findcontours返回两个值，一个是一组轮廓信息，还有一个是每条轮廓对应的属性
+    contours, hierarchy = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # print(len(contours))#findcontours返回两个值，一个是一组轮廓信息，还有一个是每条轮廓对应的属性
     # cv2.drawContours(img_thresh,contours,-1,(0,0,255),3) #将检测到的轮廓画上去 
     # cv2.imshow("img_thresh_2",img_thresh) #绘制轮廓后的图像
     # cv2.waitKey(5)
     ####1.如果检测到蓝色线或者蓝白线，进行判断###########
+    nothing_point = 0 #无用的点
     if (len(contours) > 0):   # 如果检测到的轮廓数量大于0
         con_num = len(contours) #将轮廓的个数赋值给con_num
         contour1 = [] #将contour1 赋值为空列表，[]表示列表，列表是可变的序列
         for c1 in range(len(contours)): #遍历每一个轮廓
-            for c2 in range(len(contours[c1])): #遍历每一个轮廓的轮廓上的点
-                contour1.append(contours[c1][c2]) #将每一个轮廓的每一个点都排列起来组成一个新列表，.append() 方法用于在列表末尾添加新的对象
+                for c2 in range(len(contours[c1])): #遍历每一个轮廓的轮廓上的点
+                    contour1.append(contours[c1][c2]) #将每一个轮廓的每一个点都排列起来组成一个新列表，.append() 方法用于在列表末尾添加新的对象
         contour1 = np.array(contour1) #将组成的新列表转化为矩阵，方便下一步处理
         (x, y, w, h) = cv2.boundingRect(contour1) #用一个最小的矩形，把找到的所有的轮廓包起来，返回轮值x，y是矩阵左上点的坐标，w，h是矩阵的宽和高
-
-
-
+        # print(h)
         # ####################1.1 同时检测到蓝白线和蓝线，删选出蓝白线，计算位置########################
-        if w>img_h/4: #如果整体轮廓的宽度大于四分之图片的宽度，则说明同时检测到了蓝白线和蓝线
-            mask=np.zeros_like(gray_img) #将gray_img转化为全是0的矩阵并赋值给mask即全黑
-            cv2.rectangle(mask, (x, y), (x + 250, y + h), (255, 255, 255), cv2.FILLED) #将mask的部分进行白色填充，参数为填充区域的左上角顶点和右下角顶点
+        if w>img_h/2  and con_num >1 : #如果整体轮廓的宽度大于二分之图片的宽度，则说明同时检测到了蓝白线和蓝线
+            mask=np.zeros_like(gray_img) #
+            cv2.rectangle(mask, (x, y), (x + 250, y + h-3), (255, 255, 255), cv2.FILLED) #将mask的部分进行白色填充，参数为填充区域的左上角顶将gray_img转化为全是0的矩阵并赋值给mask即全黑点和右下角顶点
             # cv2.imshow('mask',mask) #进行填充后的mask的图像
             # cv2.waitKey(5)   
             temp_img=cv2.bitwise_and(img_thresh, img_thresh, mask=mask) #将优化后的二值图img_thresh中的mask区域提取出来给temp_img
@@ -198,9 +197,6 @@ def pianyi_detect(img):
                 contour2 = np.array(contour2) #将蓝白线的轮廓信息存于contour2矩阵中
                 (x1, y1, w1, h1) = cv2.boundingRect(contour2) #蓝白线的轮廓信息
                 cv2.rectangle(img, (x1, y1), (x1 + w1, img_h), (255, 255, 255), 3)#白框-----同时检测到蓝线和蓝白线给蓝白线画白框——永远贴着底画矩形框
-                if(255 not in img_thresh[420] and 255 not in img_thresh[400]):
-                    # print("out")
-                    return 999
                 pianyi=((x1+w1/2)-(img_h/2))*FOV_w/img_h #pianyi值为矩形方框的中线距离视野中央的实际距离
                 if pianyi>0:
                     #print('右偏')
@@ -213,13 +209,10 @@ def pianyi_detect(img):
                     pianyi_text = 'stright'
                 #print(pianyi)
 
-        #########################1.2 只检测到一条线，需要判断是蓝白线还是蓝线##############
-        else:
+            #########################1.2 只检测到一条线，需要判断是蓝白线还是蓝线##############
+        elif w<img_h/2  :
             # 如果是蓝白线
             if con_num>1: #轮廓数量大于1，就是有好几段蓝色
-                if(255 not in img_thresh[420] and 255 not in img_thresh[400]):
-                # print("out")
-                    return 999
                 cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 3) #黄框----------只检测到蓝白线并用黄框画出
                 pianyi = ((x + w / 2) - (img_h / 2)) * FOV_w / img_h #pianyi值为矩形方框的中线距离视野中央的实际距离
                 if pianyi > 0:
@@ -232,13 +225,65 @@ def pianyi_detect(img):
                     # print('左偏')
                     pianyi_text = 'stright'
                 #print(pianyi)
-            # 蓝线
+            # 蓝线--------但是轮廓个数是1的时候也可能是看到了一块蓝白线，所以还要检测红线
             else:
-                cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
-                pianyi = 40-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #这个40是怎么来的。。。
-                pianyi_text='left'
-                #print('左偏移')
-                #print(pianyi)
+                #检测红线
+                cropped_img_1 = color_seperate_1(cropped_img_1)
+                gray_img = cv2.cvtColor(cropped_img_1, cv2.COLOR_BGR2GRAY)
+                # gray_img = cv2.GaussianBlur(gray_img, (5, 5), 0, 0, cv2.BORDER_DEFAULT)
+                ret, img_thresh = cv2.threshold(gray_img, 10, 255, cv2.THRESH_BINARY)
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+                img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel)
+                img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
+                contours, hierarchy = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)    
+                if len(contours) >0 : #如果红色物体数量大于1，则说明就是在红线上
+                    contour2 = []
+                    for c1 in range(len(contours)):
+                        for c2 in range(len(contours[c1])):
+                            contour2.append(contours[c1][c2])
+                    contour2 = np.array(contour2)
+                    (x2, y2, w2, h2) = cv2.boundingRect(contour2)
+                    cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
+                    pianyi = 60 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h #60是凑数
+                    pianyi_text='right'  
+                    #竖直蓝线######3
+                else: #看见一块蓝色并且真的是蓝线
+                    cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
+                    pianyi = 60-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #60凑数
+                    pianyi_text='left'
+                    if h <60 : #当只检测到中间最后一点蓝色时，判断为出去
+                        print('999')
+                        return 999
+        elif con_num == 1: #横向蓝线
+            #检测红线
+                cropped_img_1 = color_seperate_1(cropped_img_1)
+                gray_img = cv2.cvtColor(cropped_img_1, cv2.COLOR_BGR2GRAY)
+                # gray_img = cv2.GaussianBlur(gray_img, (5, 5), 0, 0, cv2.BORDER_DEFAULT)
+                ret, img_thresh = cv2.threshold(gray_img, 10, 255, cv2.THRESH_BINARY)
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+                img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel)
+                img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
+                contours, hierarchy = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)    
+                if len(contours) >0 : #如果红色物体数量大于1，则说明就是在红线上
+                    contour2 = []
+                    for c1 in range(len(contours)):
+                        for c2 in range(len(contours[c1])):
+                            contour2.append(contours[c1][c2])
+                    contour2 = np.array(contour2)
+                    (x2, y2, w2, h2) = cv2.boundingRect(contour2)
+                    cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
+                    pianyi = 13 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h #60是凑数
+                    pianyi_text='right'  
+                else: #看见一块蓝色并且真的是蓝线
+                    cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
+                    pianyi = 83-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #平滑过渡
+                    pianyi_text='left'
+                    if h <60 : #当只检测到中间最后一点蓝色时，判断为出去
+                        print('999')
+                        return 999
+        else : #检测到了左下角的点了
+            nothing_point = 1
+
 
     # 2.未检测到蓝线或者蓝白线，就检测红线
     else:
@@ -259,23 +304,18 @@ def pianyi_detect(img):
             # res = cv2.drawContours(img, contour1, -1, (0, 0, 255), 1)
             (x2, y2, w2, h2) = cv2.boundingRect(contour2)
             cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
-
             pianyi = 40 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h
             pianyi_text='right'
             #print('右偏移')
             #print(pianyi)
 
-    # cv2.imshow('res1', img) #车道线全图
-    key = cv2.waitKey(5)
-    # if key != -1:
-    # #     # rospy.loginfo(" try to exit")
-    #     pass
+    # cv2.imshow('final_img', img) #车道线全图
+    # cv2.waitKey(1)
     # # 返回偏移量（cm）和偏移方向（左偏或者右偏）
     global pianyi_befor
     pianyi_now = abs(pianyi)
     # print("first {}".format(pianyi_now))
-    if(abs(pianyi_now - pianyi_befor) > 30):
-        pianyi_now = pianyi_befor
+
     # print("second {}".format(pianyi_now))   
     if pianyi_text == 'right' :
         pianyi_now = 0 - pianyi_now
@@ -283,9 +323,12 @@ def pianyi_detect(img):
     elif  pianyi_text == 'left' :
         pianyi_now =  pianyi_now
         # print("third {}".format(pianyi_now))   
-    
-        
-    pianyi_befor = abs(pianyi_now)
+    # print(nothing_point) #打印出有没有左下角点的干扰
+    # if(abs(pianyi - pianyi_befor) > 30) or pianyi_befor == -pianyi_now  or nothing_point ==1: #去除剧烈跳变和检测到左下角点
+    if pianyi_befor == -pianyi_now  or nothing_point ==1: #这一句如果加上防止突变有点危险
+        pianyi_now = pianyi_befor           
+    pianyi_befor = pianyi_now
+    # print(pianyi_now)
     return pianyi_now
 def iscontrolsubcb(data,arg):
     global controlFlag
@@ -322,26 +365,14 @@ if __name__ == '__main__':
     data = Vector3()
     pianyibefore = 0
     pianyicount = 0
-    pianyisamelist = [0,0,0,0,0,0,0,0,0]
-    controlFlag = 10
+    pianyisamelist = [0,0,0,0,0,0,0,0]
+    controlFlag = 10 #原来是10
     openColorDetector = 0
     iscontrolsub = rospy.Subscriber("/is_version_cont",Float32,iscontrolsubcb,1)
     s = rospy.Service('/vision_control', app, handle_app_req)
     cmdData = Twist()
     cmdpub = rospy.Publisher("/cmd_vel",Twist)
-    # arg = argparse.ArgumentParser()
-    # arg.add_argument("-i", "--images", required=True,
-    #                  help="path to input directory of images")
-    # args = vars(arg.parse_args())
-    
-    # cap.release() 
-    # cv.destroyAllWindows() 
-    # 循环读取文件夹下的图像进行处理
-    # for imagePath in paths.list_images('/home/cquer/Documents/python/opencv/Image'): #args["images"]
-    #     img = cv2.imread(imagePath)
-    #     result = pianyi_detect(img)
-    #     print(result)
-    #     input('input any key to continue')
+
     try:
 
         rospy.loginfo("detector node is started...")
@@ -358,6 +389,7 @@ if __name__ == '__main__':
                 # time1 = time.time()
                 if(openColorDetector):
                     colortype = detector(Img)
+                    print(colortype)
                 else:
                     colortype = -1
                 # time2 = time.time()
@@ -386,6 +418,8 @@ if __name__ == '__main__':
                 if(openColorDetector):
                     vision.publish(data)
                 Img_2 = cv2.resize(Img,(640,480))
+                Img_2 = Img_2[3: 475,3:635]  #切割掉左右下角干扰点
+                Img_2 = cv2.resize(Img_2,(640,480))
                 # cv2.imshow('c',Img_2) #红绿灯输入全图
                 # cv2.waitKey(5)
                 # time1 = time.time()
@@ -401,17 +435,17 @@ if __name__ == '__main__':
 
                 # if(abs(pianyi - pianyibefore) >= abs(40)):
                 #     print("****************out****************")
-                if(controlFlag == 1 or False):
+                if(controlFlag == 1 or False): #原来是false
                     # print(pianyi)
                     # print("vision controling...")
-                    cmdData.linear.x = 0.4
-                    cmdData.angular.z = (pianyi*0.80837+ 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项
+                    cmdData.linear.x = 0.95
+                    cmdData.angular.z = (pianyi*1.2+ 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837
                     cmdpub.publish(cmdData)
                     # pianyicount = 0
                 elif(controlFlag == 2):
                     print("****************stop****************")
-                    cmdData.linear.x = 0
-                    cmdData.angular.z = 0
+                    cmdData.linear.x = 0.2
+                    cmdData.angular.z = -0.2
                     cmdpub.publish(cmdData)
                 # elif(pianyi == 0):
                 #     pianyicount += 1

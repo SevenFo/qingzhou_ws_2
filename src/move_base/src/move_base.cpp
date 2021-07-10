@@ -37,6 +37,7 @@
 *********************************************************************/
 #include <move_base/move_base.h>
 #include <cmath>
+#include <iostream>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
@@ -48,14 +49,16 @@
 namespace move_base {
 
   MoveBase::MoveBase(tf2_ros::Buffer& tf) :
-    tf_(tf),
-    as_(NULL),
-    planner_costmap_ros_(NULL), controller_costmap_ros_(NULL),
-    bgp_loader_("nav_core", "nav_core::BaseGlobalPlanner"),
-    blp_loader_("nav_core", "nav_core::BaseLocalPlanner"), 
-    recovery_loader_("nav_core", "nav_core::RecoveryBehavior"),
-    planner_plan_(NULL), latest_plan_(NULL), controller_plan_(NULL),
-    runPlanner_(false), setup_(false), p_freq_change_(false), c_freq_change_(false), new_global_plan_(false) {
+      tf_(tf),
+      as_(NULL),
+      planner_costmap_ros_(NULL), controller_costmap_ros_(NULL),
+      bgp_loader_("nav_core", "nav_core::BaseGlobalPlanner"),
+      blp_loader_("nav_core", "nav_core::BaseLocalPlanner"),
+      recovery_loader_("nav_core", "nav_core::RecoveryBehavior"),
+      planner_plan_(NULL), latest_plan_(NULL), controller_plan_(NULL),
+      runPlanner_(false), setup_(false), p_freq_change_(false), c_freq_change_(false), new_global_plan_(false)
+  {
+    ROS_INFO_NAMED("move_base_plan_thread","*******************this is my movebase********************8");
 
     as_ = new MoveBaseActionServer(ros::NodeHandle(), "move_base", boost::bind(&MoveBase::executeCb, this, _1), false);
 
@@ -562,14 +565,20 @@ namespace move_base {
   {
     // we have slept long enough for rate
     planner_cond_.notify_one();
+    ROS_INFO("**************weak up global planner");
   }
 
   void MoveBase::planThread(){
-    ROS_DEBUG_NAMED("move_base_plan_thread","Starting planner thread...");
+    // ROS_INFO_NAMED("move_base_plan_thread","**********Starting planner thread...************8");
+    std::cout << "**********Starting planner thread...************" << std::endl;
     ros::NodeHandle n;
     ros::Timer timer;
     bool wait_for_wake = false;
     boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_);
+
+
+    //注意这里有一个死循环
+
     while(n.ok()){
       //check if we should run the planner (the mutex is locked)
       while(wait_for_wake || !runPlanner_){
@@ -600,7 +609,7 @@ namespace move_base {
         last_valid_plan_ = ros::Time::now();
         planning_retries_ = 0;
         new_global_plan_ = true;
-
+        std::cout<<"***************HAVE GOT GLOBAL PLAN AND READY TO ENTER CONTROLLING************"<<std::endl;
         ROS_DEBUG_NAMED("move_base_plan_thread","Generated a plan from the base_global_planner");
 
         //make sure we only start the controller if we still haven't reached the goal
@@ -637,10 +646,12 @@ namespace move_base {
 
       //setup sleep interface if needed
       if(planner_frequency_ > 0){
+        //  ROS_INFO("************created a timer BEFORE***************");
         ros::Duration sleep_time = (start_time + ros::Duration(1.0/planner_frequency_)) - ros::Time::now();
         if (sleep_time > ros::Duration(0.0)){
           wait_for_wake = true;
           timer = n.createTimer(sleep_time, &MoveBase::wakePlanner, this);
+          ROS_INFO("************created a timer***************");
         }
       }
     }
@@ -684,6 +695,8 @@ namespace move_base {
     planning_retries_ = 0;
 
     ros::NodeHandle n;
+
+
     while(n.ok())
     {
       if(c_freq_change_)
@@ -693,6 +706,8 @@ namespace move_base {
         c_freq_change_ = false;
       }
 
+
+      //若果有新的个goal到来
       if(as_->isPreemptRequested()){
         if(as_->isNewGoalAvailable()){
           //if we're active and a new goal is available, we'll accept it, but we won't shut anything down
@@ -838,6 +853,7 @@ namespace move_base {
     //if we have a new plan then grab it and give it to the controller
     if(new_global_plan_){
       //make sure to set the new plan flag to false
+      std::cout<<"****************GET NEW GLOBAL PLAN CONTROLLING*********"<<std::endl;
       new_global_plan_ = false;
 
       ROS_DEBUG_NAMED("move_base","Got a new plan...swap pointers");
@@ -851,6 +867,7 @@ namespace move_base {
       lock.unlock();
       ROS_DEBUG_NAMED("move_base","pointers swapped!");
 
+      //如果我们的local planer不接受我们的globalplan的话 提示错误
       if(!tc_->setPlan(*controller_plan_)){
         //ABORT and SHUTDOWN COSTMAPS
         ROS_ERROR("Failed to pass global plan to the controller, aborting.");
@@ -870,6 +887,8 @@ namespace move_base {
         recovery_index_ = 0;
     }
 
+
+    
     //the move_base state machine, handles the control logic for navigation
     switch(state_){
       //if we are in a planning state, then we'll attempt to make a plan
@@ -885,7 +904,7 @@ namespace move_base {
       //if we're controlling, we'll attempt to find valid velocity commands
       case CONTROLLING:
         ROS_DEBUG_NAMED("move_base","In controlling state.");
-
+        //不停检查localplanner是否给出我们的goalreach
         //check to see if we've reached our goal
         if(tc_->isGoalReached()){
           ROS_DEBUG_NAMED("move_base","Goal reached!");
@@ -912,6 +931,8 @@ namespace move_base {
         {
          boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(controller_costmap_ros_->getCostmap()->getMutex()));
         
+
+        //如果我们的localplanner给出了速度的控制量，在这里发布他
         if(tc_->computeVelocityCommands(cmd_vel)){
           ROS_DEBUG_NAMED( "move_base", "Got a valid command from the local planner: %.3lf, %.3lf, %.3lf",
                            cmd_vel.linear.x, cmd_vel.linear.y, cmd_vel.angular.z );

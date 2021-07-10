@@ -47,6 +47,9 @@
 
   <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser4"
     args="0.12 0.0 0.08 0.0 0.0  0.0 /base_link /laser_frame 40" /> -->
-  <node pkg="tf" type="static_transform_publisher" name="base_link_to_imulink"
+
+  <node pkg="qingzhou_bringup" type="footprint_puber.py" name="footprint_puber_node" output="screen">
+  </node>
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_imulink"
     args="-0.08 0.0 0.05 0.0 0.0  0.0 /base_link /imu_link 50" />
 </launch>

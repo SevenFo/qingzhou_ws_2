@@ -261,6 +261,11 @@ namespace dwa_local_planner {
 
 
 
+  //先检查是否获得到了robot pose
+  //调用planner_util_.getLocalPlan
+  //  1.坐标变换
+  //  2.修剪global plan 默认开启
+  //  3. 
   bool DWAPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel) {
     // dispatches to either dwa sampling control or stop and rotate control, depending on whether we have been close enough to goal
     if ( ! costmap_ros_->getRobotPose(current_pose_)) {

@@ -70,6 +70,8 @@ typedef struct RobotStatusMsg
     float locationY;
     float ekfX;
     float ekfY;
+    float locationInMapX;
+    float locationInMapY;
     int trafficLight;//红绿灯 红色0 绿色1 未知-1
     int roadlineStatus;//车道线 还未检测到0 抵达车道线起点1 视觉接手控制2 退出车道线3
 }rsm;
@@ -93,6 +95,7 @@ private:
     ros::Subscriber ekfPoseSuber;
     ros::Subscriber trafficLightSuber;
     ros::Subscriber pianyiSuber;
+    ros::Subscriber locationInMapSuber;
     ros::Duration sleepDur;
     ros::ServiceClient visioncontrolclient;
     ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
@@ -106,6 +109,11 @@ private:
     bool haveDetectRL;//是否检测到车道线 用于在进行过程中更改目标点
     int outcount;//计算偏移量为0的次数
     float pianyibefore;
+
+
+    void _PrintCurruentLocation();
+        
+    std::string _EmumTranslator(ROBOTLOCATION value);
 
 public:
     TCP_Sender(const ros::NodeHandle &nodeHandler);
@@ -125,6 +133,7 @@ public:
     void SubSpeedCB(const geometry_msgs::Twist::ConstPtr &msg);
     void SubLocCB(const nav_msgs::Odometry::ConstPtr &msg);
     void SubEkfPoseCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
+    void SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg);
     void SubLineCB(const  geometry_msgs::Vector3::ConstPtr &msg);
     void GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr &result);
