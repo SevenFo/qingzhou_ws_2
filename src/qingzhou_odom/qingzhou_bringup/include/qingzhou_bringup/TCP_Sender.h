@@ -28,14 +28,15 @@
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseActionClient;
 enum TRAFFICLIGHT{red = 0,green = 1,yellow = 0};
 enum GOALSTATE{lost = 0,active = 1,reach = 2 ,aborted = 3};
-enum ROBOTLOCATION{load,loadingtotfl,tfltounload,unload,tfl,unloadtoload,start,starttoload,unknow,unloadtoroadline,roadline,unloadtostart,roadlineout};
+enum ROBOTLOCATION{start,starttoload,load,loadingtotfl,tfl,tfltounload,unload,unloadtoroadline,roadline,roadlineout,unloadtostart,unloadtostart,unknow};
 typedef struct RobotState
 {
     GOALSTATE goalstate;
     ROBOTLOCATION robotlocation;
-    bool inRoadLine;
-    bool roadLineOut;
-    float roadLinePianyi;
+    bool autoGoalControl;//控制是否自动连续发布目标点
+    bool inRoadLine;     //保证当视觉开启之后就不再请求开启视觉控制的service
+    bool openTflDet;
+    float roadLinePianyi; //记录当前车道线的偏移量
 }robotstate;
 
 typedef struct RobotControlMsg //ros 发送过来的消息结构体
@@ -58,7 +59,9 @@ typedef struct RobotControlMsg //ros 发送过来的消息结构体
     float userPointX;
     float userPointY;
     float userPointZ;
-}rcm;
+
+
+} rcm;
 
 typedef struct RobotStatusMsg
 {
@@ -74,6 +77,7 @@ typedef struct RobotStatusMsg
     float locationInMapY;
     int trafficLight;//红绿灯 红色0 绿色1 未知-1
     int roadlineStatus;//车道线 还未检测到0 抵达车道线起点1 视觉接手控制2 退出车道线3
+    robotstate robotstateMsg;
 }rsm;
 
 class TCP_Sender
@@ -156,9 +160,11 @@ public:
     }
     void StopVisonControl();//请求停止视觉控制
     void ClearCostmapFirstly();//清除costmap firstly
+    bool SwitchAutoGoalControlFlag();
+    bool SwitchVisionControl();//开启视觉控制
+    bool SwitchTflControl();
 
     // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
-
 };
 
 #endif

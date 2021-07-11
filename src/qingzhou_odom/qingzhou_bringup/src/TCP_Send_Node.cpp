@@ -13,7 +13,7 @@ int main(int argc, char **  argv)
 {
     ros::init(argc,argv,"TCP_Send_node");
     ros::NodeHandle nh("~");
-    ros::Timer timer = nh.createTimer(ros::Duration(0.1),TimerCB);
+    ros::Timer timer = nh.createTimer(ros::Duration(0.05),TimerCB);
     ros::Rate rate(50);
     ros::Duration dsleep(5);
     tcpsender = new TCP_Sender(nh);
@@ -32,7 +32,6 @@ int main(int argc, char **  argv)
    
             if(tcpsender->RetriveMsg(&robotControlMsg,sizeof(robotControlMsg)))
             {
-
                 switch(robotControlMsg.controlFunctionSelector)
                 {
                     case 0x01:
@@ -88,6 +87,23 @@ int main(int argc, char **  argv)
                     }
                     case 0x05:
                     {
+                        ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich auto goal control flag to"<<tcpsender->SwitchAutoGoalControlFlag());
+                        break;
+                    }
+                    case 0x06:
+                    {
+                        if(tcpsender->SwitchVisonControl())
+                            ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich vision control success");
+                        else
+                            ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich vision control failed");
+                        break;
+                    }
+                    case 0x07:
+                    {
+                        if(tcpsender->SwitchTflControl())
+                            ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich tfl control success");
+                        else
+                            ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich tfl control failed");
                         break;
                     }
                     default:
