@@ -62,15 +62,17 @@ int main(int argc, char **  argv)
                         ROS_INFO("seted goal");
                         break;
                     }
-                    case 0x03:
+                    case 0x03://不仅改变目标还改变location
                     {
-                        tcpsender->userPoint.target_pose.header.frame_id = "map";
-                        tcpsender->userPoint.target_pose.pose.position.x = robotControlMsg.userPointX;
-                        tcpsender->userPoint.target_pose.pose.position.y = robotControlMsg.userPointY;
-                        tcpsender->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.userPointZ);
-                        ROS_INFO("Excuating user goal");
-                        tcpsender->userPoint.target_pose.header.stamp = ros::Time::now();
-                        tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->userPoint);
+                        tcpsender->ExecUserGoalAndUpdateLocation(robotControlMsg);
+                        // tcpsender->userPoint.target_pose.header.frame_id = "map";
+                        // tcpsender->userPoint.target_pose.pose.position.x = robotControlMsg.userPointX;
+                        // tcpsender->userPoint.target_pose.pose.position.y = robotControlMsg.userPointY;
+                        // tcpsender->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.userPointZ);
+                        // ROS_INFO("Excuating user goal");
+                        // tcpsender->userPoint.target_pose.header.stamp = ros::Time::now();
+                        // // tcpsender->robot
+                        // tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->userPoint);
                     }
                     case 0x04:
                     {
@@ -92,7 +94,7 @@ int main(int argc, char **  argv)
                     }
                     case 0x06:
                     {
-                        if(tcpsender->SwitchVisonControl())
+                        if(tcpsender->SwitchVisionControl())
                             ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich vision control success");
                         else
                             ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich vision control failed");
@@ -104,6 +106,11 @@ int main(int argc, char **  argv)
                             ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich tfl control success");
                         else
                             ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich tfl control failed");
+                        break;
+                    }
+                    case 0x08://update locaiton
+                    {
+                        tcpsender->UpdateLocation(robotControlMsg);
                         break;
                     }
                     default:

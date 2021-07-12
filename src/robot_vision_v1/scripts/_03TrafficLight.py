@@ -6,14 +6,14 @@ from numpy.core.fromnumeric import shape
 
 Red = np.array([115, 86, 232.])
 #Yellow = np.array([10, 100, 140.])
-Green = np.array([135, 200, 17.])
-yellow = np.array([236, 250, 28.])
+# Green = np.array([135, 200, 17.]) #之前是这个
+# yellow = np.array([236, 250, 28.]) #之前是这个
 # Green = np.array([64, 145, 61.])
 # Red = np.array([38, 28, 230.])
-# Yellow = np.array([11, 81, 178.])
-# Green = np.array([35, 128, 10.])
+Yellow = np.array([11, 81, 178.])
+Green = np.array([35, 128, 10.])
 # Colors = (Red, Yellow, Green)
-Colors = (Red, Green,yellow)
+Colors = (Red, Green,Yellow)
 # ColorsName = ('Red', 'Yellow', 'Green')
 ColorsName = ('Red', 'Green1','Green2')
 DistThreshold =  5000   # 颜色距离阈值
@@ -84,5 +84,5 @@ def TrafficLight(MarkerROI, Img):
 		cv2.drawContours(LightImg, sel_contours, -1, (255, 0, 0), 3)
 		cv2.putText(Img, str([ColorsName[LightColor] for LightColor in LightColors]), (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 3)
 		# cv2.imshow('LightImg', LightImg)
-		cv2.waitKey(15)
+		# cv2.waitKey(1)
 	return LightColors

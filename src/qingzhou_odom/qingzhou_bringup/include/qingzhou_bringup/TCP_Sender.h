@@ -28,7 +28,7 @@
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseActionClient;
 enum TRAFFICLIGHT{red = 0,green = 1,yellow = 0};
 enum GOALSTATE{lost = 0,active = 1,reach = 2 ,aborted = 3};
-enum ROBOTLOCATION{start,starttoload,load,loadingtotfl,tfl,tfltounload,unload,unloadtoroadline,roadline,roadlineout,unloadtostart,unloadtostart,unknow};
+enum ROBOTLOCATION{start,starttoload,load,loadingtotfl,tfl,tfltounload,unload,unloadtoroadline,roadline,roadlineout,unloadtostart,unknow};
 typedef struct RobotState
 {
     GOALSTATE goalstate;
@@ -59,9 +59,14 @@ typedef struct RobotControlMsg //ros 发送过来的消息结构体
     float userPointX;
     float userPointY;
     float userPointZ;
-
-
-} rcm;
+    float tflPointX;
+    float tflPointY;
+    float tflPointZ;
+    float RLPointX;
+    float RLPointY;
+    float RLPointZ;
+    robotstate robotstateMsg;
+}rcm;
 
 typedef struct RobotStatusMsg
 {
@@ -163,6 +168,9 @@ public:
     bool SwitchAutoGoalControlFlag();
     bool SwitchVisionControl();//开启视觉控制
     bool SwitchTflControl();
+
+    void UpdateLocation(rcm &data);//0x0?
+    void ExecUserGoalAndUpdateLocation(rcm & data);//0x03
 
     // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
 };

@@ -46,10 +46,10 @@ def CalculatePositon(Point3D, Point2D, K, Dis):
 def DealMarker(Img):
 	CamPosition = None
 	MarkerROI = None
-	time1 = time.time()
+	# time1 = time.time()
 	Corners, IDs, rejectedImgPoints = aruco.detectMarkers(Img, dict)
-	time2 = time.time()
-	print("detectMarkers :{}".format(time2-time1))
+	# time2 = time.time()
+	# print("detectMarkers :{}".format(time2-time1))
 	# print(IDs)
 	# print(Corners)
 #	print(type(Corners[0]))

@@ -119,10 +119,10 @@ def region_of_interest(r_image):
 # ###############################蓝色分割############################
 def color_seperate(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)   #对目标图像进行色彩空间转换
-    # lower_hsv = np.array([100, 43, 46])          #设定蓝色下限
-    # upper_hsv = np.array([124, 255, 255])        #设定蓝色上限
-    lower_hsv = np.array([80, 60, 60])          #设定蓝色下限
-    upper_hsv = np.array([150, 180, 180])        #设定蓝色上限
+    lower_hsv = np.array([100, 43, 46])          #设定蓝色下限
+    upper_hsv = np.array([124, 255, 255])        #设定蓝色上限
+    # lower_hsv = np.array([80, 60, 60])          #设定蓝色下限
+    # upper_hsv = np.array([150, 180, 180])        #设定蓝色上限
     mask = cv2.inRange(hsv, lowerb=lower_hsv, upperb=upper_hsv)  #依据设定的上下限对目标图像进行二值化转换，低于lower,高于upper都变成0，在中间为255
     dst = cv2.bitwise_and(image, image, mask=mask)    #将image的mask区域提取出来给dst,即找到蓝色区域并赋值给dst
     # cv2.imshow('blue', dst)  #查看蓝色区域的图像
@@ -132,8 +132,10 @@ def color_seperate(image):
 # ############################红色分割##############################
 def color_seperate_1(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)   #对目标图像进行色彩空间转换
-    lower_hsv = np.array([156, 43, 46])          #设定红色下限
-    upper_hsv = np.array([180, 255, 255])        #设定红色上限
+    # lower_hsv = np.array([156, 43, 46])          #设定红色下限
+    # upper_hsv = np.array([180, 255, 255])        #设定红色上限
+    lower_hsv = np.array([0, 43, 46])          #设定红色下限
+    upper_hsv = np.array([10, 255, 255])        #设定红色上限
     mask = cv2.inRange(hsv, lowerb=lower_hsv, upperb=upper_hsv)  #依据设定的上下限对目标图像进行二值化转换，低于lower,高于upper都变成0，在中间为255
     dst = cv2.bitwise_and(image, image, mask=mask)    #将image的mask区域提取出来给dst,即找到红色区域并赋值给dst
     # cv2.imshow('red', dst)  #查看红色区域的图像
@@ -246,14 +248,14 @@ def pianyi_detect(img):
                     cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
                     pianyi = 60 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h #60是凑数
                     pianyi_text='right'  
-                    #竖直蓝线######3
+                    #竖直蓝线######
                 else: #看见一块蓝色并且真的是蓝线
                     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
                     pianyi = 60-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #60凑数
                     pianyi_text='left'
-                    if h <60 : #当只检测到中间最后一点蓝色时，判断为出去
-                        print('999')
-                        return 999
+                    # if h <60 and w < 150 : #当只检测到中间最后一点蓝色时，判断为出去
+                    #     print('99999')
+                    #     return 999
         elif con_num == 1: #横向蓝线
             #检测红线
                 cropped_img_1 = color_seperate_1(cropped_img_1)
@@ -278,9 +280,9 @@ def pianyi_detect(img):
                     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
                     pianyi = 83-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #平滑过渡
                     pianyi_text='left'
-                    if h <60 : #当只检测到中间最后一点蓝色时，判断为出去
-                        print('999')
-                        return 999
+                    # if h <60 and w < 100: #当只检测到中间最后一点蓝色时，判断为出去
+                    #     print('9999')
+                    #     return 999
         else : #检测到了左下角的点了
             nothing_point = 1
 
@@ -328,7 +330,7 @@ def pianyi_detect(img):
     if pianyi_befor == -pianyi_now  or nothing_point ==1: #这一句如果加上防止突变有点危险
         pianyi_now = pianyi_befor           
     pianyi_befor = pianyi_now
-    # print(pianyi_now)
+    print(pianyi_now)
     return pianyi_now
 def iscontrolsubcb(data,arg):
     global controlFlag
@@ -367,7 +369,7 @@ if __name__ == '__main__':
     pianyicount = 0
     pianyisamelist = [0,0,0,0,0,0,0,0]
     controlFlag = 10 #原来是10
-    openColorDetector = 0
+    openColorDetector = 0 #原来是0
     iscontrolsub = rospy.Subscriber("/is_version_cont",Float32,iscontrolsubcb,1)
     s = rospy.Service('/vision_control', app, handle_app_req)
     cmdData = Twist()
@@ -438,9 +440,10 @@ if __name__ == '__main__':
                 if(controlFlag == 1 or False): #原来是false
                     # print(pianyi)
                     # print("vision controling...")
-                    cmdData.linear.x = 0.95
-                    cmdData.angular.z = (pianyi*1.2+ 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837
+                    cmdData.linear.x = 0.8
+                    cmdData.angular.z = (pianyi*1.4+ 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837
                     cmdpub.publish(cmdData)
+
                     # pianyicount = 0
                 elif(controlFlag == 2):
                     print("****************stop****************")
@@ -466,7 +469,7 @@ if __name__ == '__main__':
                     else:
                         pianyisamelist[index] = pianyi
                 if(len(set(pianyisamelist)) == 1 and (time.time()-starttime) > 6):
-                    # print("****************out****************")
+                    print("****************out****************")
                     pianyi = 999
                     # print(time.time()-starttime)
                 # print(pianyisamelist)

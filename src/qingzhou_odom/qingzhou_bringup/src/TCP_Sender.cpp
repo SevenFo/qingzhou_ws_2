@@ -95,7 +95,7 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
     if(!haveDetectedTfl)//如果还没还没有检测到交通灯，那就执行下面的程序，检测话题值
     {
 
-        if(robotStatusMsg.trafficLight == 666 && robotState.robotlocation != tfl)//如果是红灯，而且机器人当前的位置不在停止线那就前往停止线等待绿灯
+        if((robotStatusMsg.trafficLight == 0 || robotStatusMsg.trafficLight == 2) && robotState.robotlocation != tfl)//如果是红灯，而且机器人当前的位置不在停止线那就前往停止线等待绿灯
         {
             ROS_INFO_STREAM("red");
             haveDetectedTfl = true;//保证只能检测到一次红绿灯，防止频繁更改目标点，当到达下一个目标点的时候才释放红绿灯检测权
@@ -107,32 +107,35 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
             this->moveBaseActionClientPtr->sendGoal(trafficLightStopLine, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
             robotState.goalstate = active;
             robotState.robotlocation = loadingtotfl;
+            this->robotStatusMsg.robotstateMsg = robotState;
             ROS_INFO("going to tfl");
             ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
         }
-
-        if(robotStatusMsg.trafficLight == 777 ||robotStatusMsg.trafficLight == 888 )//如果是绿灯，不管车在哪里都直接前往下一个目标点
-        {
-            ROS_INFO_STREAM("green");
-            qingzhou_bringup::app req;
-            req.request.statue = 4;
-            if (visioncontrolclient.call(req))
-            {
-                ROS_INFO_NAMED("TCP_Sender", "closed color detector");
-            }
-            else
-            {
-                //todo
-            }
-            //change goal to next postioin
-            haveDetectedTfl = true;
-            this->moveBaseActionClientPtr->sendGoal(throwGoodsPoint, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.goalstate = active;
-            robotState.robotlocation = tfltounload;
-            ROS_INFO("going to unload");
-            ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
-        }
     }
+
+    if(robotStatusMsg.trafficLight == 1)//如果是绿灯，不管车在哪里都直接前往下一个目标点
+    {
+        ROS_INFO_STREAM("green");
+        qingzhou_bringup::app req;
+        req.request.statue = 4;
+        if (visioncontrolclient.call(req))
+        {
+            ROS_INFO_NAMED("TCP_Sender", "closed color detector");
+        }
+        else
+        {
+            //todo
+        }
+        //change goal to next postioin
+        haveDetectedTfl = true;
+        this->moveBaseActionClientPtr->sendGoal(throwGoodsPoint, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+        robotState.goalstate = active;
+        robotState.robotlocation = tfltounload;
+        this->robotStatusMsg.robotstateMsg = robotState;
+        ROS_INFO("going to unload");
+        ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
+    }
+    
 
 }
 
@@ -201,7 +204,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
             }
         case tfltounload:{robotState.robotlocation = unload;break;}
         //废弃
-        case unloadtoload:{robotState.robotlocation = load;break;}
+        // case unloadtoload:{robotState.robotlocation = load;break;}
         //当前使用
         case unloadtostart:{robotState.robotlocation = start;break;}
         case loadingtotfl:{robotState.robotlocation = tfl;break;}
@@ -236,7 +239,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
         robotState.goalstate = aborted;
     }
     std::cout<<"goal state change to "<<robotState.goalstate << " and now location is "<<robotState.robotlocation<<std::endl;
-
+    robotStatusMsg.robotstateMsg = robotState;//update
 }
 void TCP_Sender::GoalActiveCB()
 {   
@@ -393,16 +396,16 @@ void TCP_Sender::RunGoal()
             ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
             break;
         }
-        case unloadtoload:
-        {
-            moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = unloadtoload;
-            robotState.goalstate = active;
-            ROS_INFO("robot can't reach the goal, try to go load again");
-            ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
+        // case unloadtoload:
+        // {
+        //     moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+        //     robotState.robotlocation = unloadtoload;
+        //     robotState.goalstate = active;
+        //     ROS_INFO("robot can't reach the goal, try to go load again");
+        //     ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
 
-            break;
-        }
+        //     break;
+        // }
         case loadingtotfl:
         {
             moveBaseActionClientPtr->sendGoal(trafficLightStopLine,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
@@ -460,9 +463,11 @@ void TCP_Sender::RunGoal()
         ROS_INFO_STREAM("GOAL: x:" << getGoodsPoint.target_pose.pose.position.x << " y:" << getGoodsPoint.target_pose.pose.position.y << " z:" << getGoodsPoint.target_pose.pose.orientation.z);
     }
     else{
-        ROS_ERROR_NAMED("TCP_Sender", "something worong happened, robot have been an unknown goal state!");
-
+        ROS_ERROR_NAMED("TCP_Sender", "something worong happened, robot have been an unknown goal state!"); 
     }
+    
+    robotStatusMsg.robotstateMsg = this->robotState;//更新robotstate到上位机
+
 }
 
 
@@ -599,7 +604,7 @@ void TCP_Sender::StopVisonControl()
         robotState.robotlocation = roadlineout;
         robotState.inRoadLine = false;
         robotStatusMsg.roadlineStatus = 3;
-
+        this->robotStatusMsg.robotstateMsg = robotState;
         //返回导航控制状态
         qingzhou_bringup::app req;
         req.request.statue = 0;
@@ -652,7 +657,7 @@ void TCP_Sender::_PrintCurruentLocation() {
 }    
 
 std::string TCP_Sender::_EmumTranslator(ROBOTLOCATION value){
-    if (typeid(value) == typeid(ROBOTLOCATION)) {
+    if (true) {
         switch (robotState.robotlocation)
         {
         case  load: 
@@ -674,18 +679,6 @@ std::string TCP_Sender::_EmumTranslator(ROBOTLOCATION value){
         default:
             break;
         }
-    }
-    else if(typeid(value) == typeid(int))
-    {
-        // switch (expression)
-        // {
-        // case /* constant-expression */:
-        //     /* code */
-        //     break;
-        
-        // default:
-        //     break;
-        // }
     }
 }
 
@@ -753,7 +746,7 @@ bool TCP_Sender::SwitchTflControl()
 {
     if(robotState.openTflDet)
     {
-        ROS_INFO_NAMED("robot will close tfl detector, if robot in the tfl location, it may open again by itself");
+        ROS_INFO_NAMED("TCP_Sender","robot will close tfl detector, if robot in the tfl location, it may open again by itself");
         qingzhou_bringup::app req;
         req.request.statue = 4;
         if (visioncontrolclient.call(req))
@@ -766,13 +759,13 @@ bool TCP_Sender::SwitchTflControl()
         else
         {
             //todo
-            ROS_INFO_NAMED("RCP_Sender", "close color detector failed");
+            ROS_INFO_NAMED("TCP_Sender", "close color detector failed");
             robotStatusMsg.robotstateMsg = this->robotState;//更新robotstate到上位机
             return false;
         }
     }
     else{
-        ROS_INFO_NAMED("robot will open tfl detector, 如果机器人检测到红色/绿色他可能会自己前往下一个目标点，请注意不要在不正确的地方开启这个东西");
+        ROS_INFO_NAMED("TCP_Sender","robot will open tfl detector, 如果机器人检测到红色/绿色他可能会自己前往下一个目标点，请注意不要在不正确的地方开启这个东西");
         qingzhou_bringup::app req;
         req.request.statue = 3;
         if (visioncontrolclient.call(req))
@@ -790,4 +783,25 @@ bool TCP_Sender::SwitchTflControl()
             return false;
         }
     }
+}
+
+
+void TCP_Sender::UpdateLocation(rcm &data)
+{
+    this->robotState.robotlocation = data.robotstateMsg.robotlocation;
+    ROS_INFO_STREAM_NAMED("TCP_Sender", "robot location has been change to " << this->_EmumTranslator(this->robotState.robotlocation));
+}
+
+void TCP_Sender::ExecUserGoalAndUpdateLocation(rcm &data)
+{
+    //update location
+    this->UpdateLocation(data);
+    this->userPoint.target_pose.header.frame_id = "map";
+    this->userPoint.target_pose.pose.position.x = data.userPointX;
+    this->userPoint.target_pose.pose.position.y = data.userPointY;
+    this->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(data.userPointZ);
+    ROS_INFO("Excuating user goal");
+    this->userPoint.target_pose.header.stamp = ros::Time::now();
+    // this->robot
+    this->moveBaseActionClientPtr->sendGoal(this->userPoint);
 }
