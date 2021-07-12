@@ -1,7 +1,11 @@
 #include "TCP_Sender.h"
 #include "math.h"
-TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler){
+
+TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler))
+{
     nh = nodeHandler;//获取节点句柄
+
+
     bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",5,&TCP_Sender::SubBettaryInfoCB,this);//电池电量
     speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel",50,&TCP_Sender::SubSpeedCB,this);//速度
     locationSuber = nh.subscribe<nav_msgs::Odometry>("/odom",50,&TCP_Sender::SubLocCB,this);//odom
@@ -31,7 +35,6 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler){
     ROS_INFO_NAMED("TCP_Sender", "Waiting services");
     clearCostmapClient.waitForExistence();
 
-    
 
     //初始化停止线的位置
     trafficLightStopLine.target_pose.header.frame_id = "map";
@@ -90,50 +93,66 @@ void TCP_Sender::SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped:
 }
 void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
 {
-    robotStatusMsg.trafficLight = (int)(msg.get()->x);
+    // robotStatusMsg.trafficLight = (int)(msg.get()->x);
+    this->robot_local_state.trafficLightColor = (int)(msg.get()->x);
     // ROS_INFO_STREAM("tfl data: "<<robotStatusMsg.trafficLight);
-    if(!haveDetectedTfl)//如果还没还没有检测到交通灯，那就执行下面的程序，检测话题值
-    {
+    // if(!haveDetectedTfl)//如果还没还没有检测到交通灯，那就执行下面的程序，检测话题值
+    // {
 
-        if((robotStatusMsg.trafficLight == 0 || robotStatusMsg.trafficLight == 2) && robotState.robotlocation != tfl)//如果是红灯，而且机器人当前的位置不在停止线那就前往停止线等待绿灯
-        {
-            ROS_INFO_STREAM("red");
-            haveDetectedTfl = true;//保证只能检测到一次红绿灯，防止频繁更改目标点，当到达下一个目标点的时候才释放红绿灯检测权
-            //change goal to stop line
-            //boost::thread actionGoalThread(this->moveBaseActionClientPtr->sendGoal,this->moveBaseActionClientPtr,)
+    //     if((robotStatusMsg.trafficLight == 0 || robotStatusMsg.trafficLight == 2) && robotState.robotlocation != tfl)//如果是红灯，而且机器人当前的位置不在停止线那就前往停止线等待绿灯
+    //     {
+    //         ROS_INFO_STREAM("red");
+    //         haveDetectedTfl = true;//保证只能检测到一次红绿灯，防止频繁更改目标点，当到达下一个目标点的时候才释放红绿灯检测权
+    //         // //change goal to stop line
+    //         // //boost::thread actionGoalThread(this->moveBaseActionClientPtr->sendGoal,this->moveBaseActionClientPtr,)
             
 
-            //发送前往停止线的命令
-            this->moveBaseActionClientPtr->sendGoal(trafficLightStopLine, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.goalstate = active;
-            robotState.robotlocation = loadingtotfl;
-            this->robotStatusMsg.robotstateMsg = robotState;
-            ROS_INFO("going to tfl");
-            ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
-        }
-    }
-
-    if(robotStatusMsg.trafficLight == 1)//如果是绿灯，不管车在哪里都直接前往下一个目标点
+    //         // //发送前往停止线的命令
+    //         // this->moveBaseActionClientPtr->sendGoal(trafficLightStopLine, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+    //         // robotState.goalstate = active;
+    //         // robotState.robotlocation = loadingtotfl;
+    //         // this->robotStatusMsg.robotstateMsg = robotState;
+    //         // ROS_INFO("going to tfl");
+    //         // ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
+    //     }
+    // }
+    if((this->robot_local_state.trafficLightColor == red || this->robot_local_state.trafficLightColor == yellow)&&(!this->haveDetectedRedTfl))
     {
-        ROS_INFO_STREAM("green");
-        qingzhou_bringup::app req;
-        req.request.statue = 4;
-        if (visioncontrolclient.call(req))
-        {
-            ROS_INFO_NAMED("TCP_Sender", "closed color detector");
-        }
-        else
-        {
-            //todo
-        }
-        //change goal to next postioin
-        haveDetectedTfl = true;
-        this->moveBaseActionClientPtr->sendGoal(throwGoodsPoint, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-        robotState.goalstate = active;
-        robotState.robotlocation = tfltounload;
-        this->robotStatusMsg.robotstateMsg = robotState;
-        ROS_INFO("going to unload");
-        ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
+        ROS_INFO_STREAM("识别到 红灯");
+        this->haveDetectedRedTfl = true;//不要频繁发布目标点
+        this->UpdateRobotLocation(loadingtotfl);
+        this->UpdateRobotCurruentGoal(goal_tfl);
+        this->ExecGoal();
+    }
+    else if(this->robot_local_state.trafficLightColor == green)//如果是绿灯，不管车在哪里都直接前往下一个目标点
+    {
+        //频繁发布绿灯的目标点会怎么样？
+        ROS_INFO_STREAM("识别到 绿灯");
+        this->haveDetectedRedTfl = false;
+        this->UpdateRobotLocation(loadtounload);
+        this->UpdateRobotCurruentGoal(goal_unload);
+        this->ExecGoal();
+        //等到了unload在关闭红绿灯探测吧
+
+
+        // qingzhou_bringup::app req;
+        // req.request.statue = 4;
+        // if (visioncontrolclient.call(req))
+        // {
+        //     ROS_INFO_NAMED("TCP_Sender", "closed color detector");
+        // }
+        // else
+        // {
+        //     //todo
+        // }
+        // //change goal to next postioin
+        // haveDetectedTfl = true;
+        // this->moveBaseActionClientPtr->sendGoal(throwGoodsPoint, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+        // robotState.goalstate = active;
+        // robotState.robotlocation = tfltounload;
+        // this->robotStatusMsg.robotstateMsg = robotState;
+        // ROS_INFO("going to unload");
+        // ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
     }
     
 
@@ -142,93 +161,85 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
 
 void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
 {
+
+    //注意，只有发送请求之后，这个话题在有值，这个回调函数才会被调用，并且这个函数是为了检测有没有退出赛道
+
     int pianyi = (msg.get()->y);
-    if(robotState.inRoadLine)//不过，在开启 vision的request还没发送给脚本的话，该话题是没有pianyi可以读取的，所以这个条件应该可以删了
+    if(int(pianyi))//pianyi >0 才进入 因为和红绿灯共同使用一个话题，默认情况下painyi=0
     {
-        if(int(pianyi))//pianyi >0 才进入
-        {
-            robotState.roadLinePianyi = pianyi;
-            ROS_INFO_STREAM("pianyi "<<pianyi<<" devid :"<<abs(pianyi - pianyibefore));
-            if(pianyi >998 ){//偏移跳变大于30判断退出赛道 不太好用 废弃了
-                //如果车在车道线里面，并且检测不到车道线，才判断location在roadlineout
-                if(robotState.robotlocation == roadline)
-                {
-                    StopVisonControl();
-                }
-                
+        // robotState.roadLinePianyi = pianyi;
+        // ROS_INFO_STREAM("pianyi "<<pianyi<<" devid :"<<abs(pianyi - pianyibefore));
+        if(pianyi >998 ){//偏移跳变大于30判断退出赛道 不太好用 废弃了
+            this->UpdateRobotLocation(roadlineout);
+            //如果车在车道线里面，并且检测不到车道线，才判断location在roadlineout
+            // if(robotState.robotlocation == roadline)
+            // {
+            //     StopVisonControl();
+            // }
+            //只有在车道线起点的时候才会有pianyi开启，所以哪个条件也没用了，直接STOP
+            if(this->StopRLDet())
+            {
+                this->robot_local_state.goalState = reach;
             }
+            else{
+                ROS_INFO_NAMED("TCP_Sender", "完蛋，车车停不下来了！");
+            }
+            //
+            
         }
-        else{
-            ROS_INFO_STREAM("pianyi " << pianyi);
-        }
+    }
+    else{
+        ROS_INFO_STREAM("pianyi " << pianyi);
     }
     pianyibefore = pianyi;
 }
 
 
-//目标点完成的回调函数用于更改robotState.goalstate
+//目标点完成的回调函数用于更改 goalstate
 void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr& result)
 {
-    ROS_INFO("Finished in state [%s]", state.toString().c_str());
-
-    std::cout << "i am a goal done cb" << std::endl;
-
-    std_srvs::Empty req;
-    if (clearCostmapClient.call(req)) {
-        ROS_INFO_NAMED("TCP_Sender", "clear cost map success!");
-        //在转角的时候路径规划没有考虑障碍物？
-        ROS_INFO_NAMED("TCP_Sender", "Sleep for 0.8 second,(wait costmap to update)");
-        sleepDur = ros::Duration(0.8);
-        sleepDur.sleep();
-        ROS_INFO_NAMED("TCP_Sender", "Weak up(wait costmap to update)");
-
-
-    }
-    else
-    {
-        ROS_INFO_NAMED("TCP_Sender", "clear cost map failed!");
-    }
-
+    ROS_INFO("目标点完成结果： [%s]", state.toString().c_str());
+    // first clear costmap
+    this->ClearCostmapAndWait();
     //ROS_INFO("Answer: %i", result->sequence.back());
     //出发点-转载点 -> 装载点； 装载点 - 交通灯->交通灯； 交通灯 - 卸货点->卸货点； 卸货点 - 车道线出发点->车道线出发点 ->
     if (state == actionlib::SimpleClientGoalState::SUCCEEDED)
     {
         
-        haveDetectedTfl = false;
-        robotState.goalstate = reach;
-        switch (robotState.robotlocation)
+        // haveDetectedTfl = false;
+        this->robot_local_state.goalState = reach;
+        switch (this->robot_local_state.location)
         {
         case starttoload: {
-            robotState.robotlocation = load;
+            this->UpdateRobotLocation(load);
             break;
             }
-        case tfltounload:{robotState.robotlocation = unload;break;}
-        //废弃
-        // case unloadtoload:{robotState.robotlocation = load;break;}
-        //当前使用
-        case unloadtostart:{robotState.robotlocation = start;break;}
-        case loadingtotfl:{robotState.robotlocation = tfl;break;}
+        case tfltounload:{this->UpdateRobotLocation(load);break;}
+        case loadtounload:{this->UpdateRobotLocation(load);break;}
+        case unloadtostart:{this->UpdateRobotLocation(start);break;}
+        case loadingtotfl:{this->UpdateRobotLocation(tfl);break;}
         case unloadtoroadline:
         {
-            robotStatusMsg.roadlineStatus = 1;
-            //更改一下从unloadtoroadline切换到roadline的条件，感觉和RobotState.inRoadLine这个条件变量冲突了
-            //不冲突，RobotState.inRoadLine 保证当视觉开启之后就不再请求开启视觉控制的service，之后当service请求成功之后set true，否则会一直尝试
-            ROS_INFO("change unloadtoroadline to roadline and inroadline set true");
-            robotState.robotlocation = roadline;
-            qingzhou_bringup::app req;
-            req.request.statue = 1;
-            if (visioncontrolclient.call(req))
-            {
-                robotState.inRoadLine=true;//神经网络接手控制
-                robotStatusMsg.roadlineStatus = 2;
-                ROS_INFO_NAMED("TCP_Sender", "open roadline detector succrss");
-            }
-            else
-            {
-                ROS_INFO_NAMED("TCP_Sender", "open roadline detector failed， robot well try to call it later");
-                //todo
-            }
-            
+            this->UpdateRobotLocation(roadline);
+            // robotStatusMsg.roadlineStatus = 1;
+            // //更改一下从unloadtoroadline切换到roadline的条件，感觉和RobotState.inRoadLine这个条件变量冲突了
+            // //不冲突，RobotState.inRoadLine 保证当视觉开启之后就不再请求开启视觉控制的service，之后当service请求成功之后set true，否则会一直尝试
+            // ROS_INFO("change unloadtoroadline to roadline and inroadline set true");
+            // robotState.robotlocation = roadline;
+            // qingzhou_bringup::app req;
+            // req.request.statue = 1;
+            // if (visioncontrolclient.call(req))
+            // {
+            //     robotState.inRoadLine=true;//神经网络接手控制
+            //     robotStatusMsg.roadlineStatus = 2;
+            //     ROS_INFO_NAMED("TCP_Sender", "open roadline detector succrss");
+            // }
+            // else
+            // {
+            //     ROS_INFO_NAMED("TCP_Sender", "open roadline detector failed， robot well try to call it later");
+            //     //todo
+            // }
+
             break;
         }
         default:{ROS_WARN("cant get positonstate");break;}
@@ -236,10 +247,10 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
     }
     else if(state == actionlib::SimpleClientGoalState::ABORTED || state == actionlib::SimpleClientGoalState::PREEMPTED)
     {
-        robotState.goalstate = aborted;
+        this->robot_local_state.goalState = aborted;
     }
     std::cout<<"goal state change to "<<robotState.goalstate << " and now location is "<<robotState.robotlocation<<std::endl;
-    robotStatusMsg.robotstateMsg = robotState;//update
+
 }
 void TCP_Sender::GoalActiveCB()
 {   
@@ -376,12 +387,13 @@ void TCP_Sender::RunGoal()
     else if(robotState.goalstate == aborted) //如果目标在中途异常停止
     {
         // ROS_INFO_STREAM("abort:");
+        ROS_INFO_STREAM_NAMED("TCP_Sender", "无法达到目标点，即将重新发布目标点");
+        this->_PrintCurruentLocation();
         switch (robotState.robotlocation)
         {
         case starttoload:
         {
             moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = starttoload;
             robotState.goalstate = active;
             ROS_INFO("robot can't reach the goal, try to go load again");
             ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
@@ -390,26 +402,14 @@ void TCP_Sender::RunGoal()
         case tfltounload:
         {
             moveBaseActionClientPtr->sendGoal(throwGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = tfltounload;
             robotState.goalstate = active;
             ROS_INFO("robot can't reach the goal, try to go unload again");
             ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
             break;
         }
-        // case unloadtoload:
-        // {
-        //     moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-        //     robotState.robotlocation = unloadtoload;
-        //     robotState.goalstate = active;
-        //     ROS_INFO("robot can't reach the goal, try to go load again");
-        //     ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
-
-        //     break;
-        // }
         case loadingtotfl:
         {
             moveBaseActionClientPtr->sendGoal(trafficLightStopLine,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = loadingtotfl;
             robotState.goalstate = active;
             ROS_INFO("robot can't reach the goal, try to go to tfl again");
             ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
@@ -417,7 +417,6 @@ void TCP_Sender::RunGoal()
         }
         case unloadtoroadline:{
             moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = unloadtoroadline;
             robotState.goalstate = active;
             ROS_INFO("robot can't reach the goal, try to go to roadline again");
             ROS_INFO_STREAM("GOAL: x:"<<lineStart.target_pose.pose.position.x<<" y:"<<lineStart.target_pose.pose.position.y<<" z:"<<lineStart.target_pose.pose.orientation.z);
@@ -425,7 +424,6 @@ void TCP_Sender::RunGoal()
         }
         case unloadtostart:{
             moveBaseActionClientPtr->sendGoal(startPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = unloadtostart;
             robotState.goalstate = active;
             ROS_INFO("robot can't reach the goal, try to go to start area again");
             ROS_INFO_STREAM("GOAL: x:"<<startPoint.target_pose.pose.position.x<<" y:"<<startPoint.target_pose.pose.position.y<<" z:"<<startPoint.target_pose.pose.orientation.z);
@@ -441,26 +439,28 @@ void TCP_Sender::RunGoal()
     else if(robotState.goalstate == active)
     {
         //正在执行goal
-        //检测道路线
 
         //这边是变前进变检测车道线，不太稳定，已经改成了前往车道线出发点的方法
         // ROS_INFO_STREAM("active:");
-        if(false)//if havedetectedRL
-        {
-            moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
-            robotState.robotlocation = unloadtoroadline;
-            robotState.goalstate = active;
-            ROS_INFO("detect road line firstly and chanage goal to go to roadline");
-            ROS_INFO_STREAM("GOAL: x:"<<lineStart.target_pose.pose.position.x<<" y:"<<lineStart.target_pose.pose.position.y<<" z:"<<lineStart.target_pose.pose.orientation.z);
-        }
+        // if(false)//if havedetectedRL
+        // {
+        //     moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+        //     robotState.robotlocation = unloadtoroadline;
+        //     robotState.goalstate = active;
+        //     ROS_INFO("detect road line firstly and chanage goal to go to roadline");
+        //     ROS_INFO_STREAM("GOAL: x:"<<lineStart.target_pose.pose.position.x<<" y:"<<lineStart.target_pose.pose.position.y<<" z:"<<lineStart.target_pose.pose.orientation.z);
+        // }
+
+        //pass
     }
     else if(robotState.goalstate == lost)
     {
-        ROS_INFO("this is the first goal, robot will go to load area");
+        ROS_INFO("这是第一次发布目标点，机器人会前往装载货区");
         moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2),boost::bind(&TCP_Sender::GoalActiveCB,this));
         robotState.goalstate = active;
         robotState.robotlocation = starttoload;
-        ROS_INFO_STREAM("GOAL: x:" << getGoodsPoint.target_pose.pose.position.x << " y:" << getGoodsPoint.target_pose.pose.position.y << " z:" << getGoodsPoint.target_pose.pose.orientation.z);
+        ROS_INFO_STREAM("Setted GOAL: x:" << getGoodsPoint.target_pose.pose.position.x << " y:" << getGoodsPoint.target_pose.pose.position.y << " z:" << getGoodsPoint.target_pose.pose.orientation.z);
+        this->_PrintCurruentLocation();//打印当前的区域
     }
     else{
         ROS_ERROR_NAMED("TCP_Sender", "something worong happened, robot have been an unknown goal state!"); 
@@ -742,6 +742,45 @@ bool TCP_Sender::SwitchVisionControl(){
 
 }
 
+bool TCP_Sender::OpenTflDet()
+{
+    ROS_INFO_NAMED("TCP_Sender","机器人即将开启红绿灯探测, 如果机器人检测到红色/绿色他可能会自己前往下一个目标点，请注意不要在不正确的地方开启这个东西");
+    qingzhou_bringup::app req;
+    req.request.statue = 3;
+    if (visioncontrolclient.call(req))
+    {
+        ROS_INFO_NAMED("RCP_Sender", "开启成功");
+        this->robot_local_state.openTflDet = true;
+        return true;
+    }
+    else
+    {
+        ROS_INFO_NAMED("RCP_Sender", "开启失败");
+        this->robot_local_state.openTflDet = false;
+        return false;
+    }
+}
+
+bool TCP_Sender::StopTflDet()
+{
+    ROS_INFO_NAMED("TCP_Sender","机器人即将关闭红绿灯探测");
+    qingzhou_bringup::app req;
+    req.request.statue = 4;
+    if (visioncontrolclient.call(req))
+    {
+        ROS_INFO_NAMED("RCP_Sender", "关闭成功");
+        this->robot_local_state.openTflDet = false;
+        return true;
+    }
+    else
+    {
+        ROS_INFO_NAMED("RCP_Sender", "关闭失败");
+        this->robot_local_state.openTflDet = true;
+        return false;
+    }
+}
+
+
 bool TCP_Sender::SwitchTflControl()
 {
     if(robotState.openTflDet)
@@ -801,7 +840,302 @@ void TCP_Sender::ExecUserGoalAndUpdateLocation(rcm &data)
     this->userPoint.target_pose.pose.position.y = data.userPointY;
     this->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(data.userPointZ);
     ROS_INFO("Excuating user goal");
+
     this->userPoint.target_pose.header.stamp = ros::Time::now();
     // this->robot
     this->moveBaseActionClientPtr->sendGoal(this->userPoint);
+}
+
+
+
+
+//******************************new********************
+void TCP_Sender::ExecGoal()
+{
+    move_base_msgs::MoveBaseGoal tmp;
+    tmp.target_pose.header.frame_id = "map";
+    tmp.target_pose.pose.position.x = robot_local_state.goalList[robot_local_state.curruentGoal].x;
+    tmp.target_pose.pose.position.y = robot_local_state.goalList[robot_local_state.curruentGoal].y;
+    tmp.target_pose.pose.orientation = tf::createQuaternionFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z);
+    ROS_INFO_NAMED("TCP_Sender", "机器人将前往：xxx");
+
+    tmp.target_pose.header.stamp = ros::Time::now();
+
+    this->moveBaseActionClientPtr->sendGoal(this->userPoint);
+    ROS_INFO_NAMED("TCP_Sender", "成功发送目标点");
+}
+
+void TCP_Sender::UpdateRobotLocation(ROBOTLOCATION value)
+{
+    this->robot_local_state.location = value;
+    ROS_INFO_NAMED("TCP_Sender", "成功更新机器人位置为：xxx");
+}
+
+void TCP_Sender::UpdateRobotCurruentGoal(ROBOTGOALPOINT goal)
+{
+    this->robot_local_state.curruentGoal = goal;
+    ROS_INFO_NAMED("TCP_Sender", "成功更新机器人的当前目标点为：xxx");
+}
+
+
+void TCP_Sender::OpenRLDet()
+{
+    qingzhou_bringup::app req;
+    req.request.statue = 1;
+    if(visioncontrolclient.call(req))
+    {
+        this->robot_local_state.openRoadLineDet = true;
+        this->UpdateRobotLocation(roadline);
+        ROS_INFO("成功开启车道线控制");
+        return true;
+    }
+    else
+    {
+        this->robot_local_state.openRoadLineDet = false;
+        ROS_INFO("开启车道线控制失败");
+        return false;
+    }
+}
+
+void TCP_Sender::StopRLDet()
+{
+    qingzhou_bringup::app req;
+    req.request.statue = 2;
+    if (visioncontrolclient.call(req))
+    {
+        ROS_INFO("停止车道线控制");
+        this->robot_local_state.openRoadLineDet = false;
+        //返回导航控制状态
+        qingzhou_bringup::app req;
+        req.request.statue = 0;
+        if (visioncontrolclient.call(req))
+        {
+            //say something
+        }
+    }
+    else
+    {
+        ROS_INFO("停止车道线控制失败");
+        this->robot_local_state.openRoadLineDet = true;
+        //如果请求服务失败，robotState.inRoadLine 依然被设置为true，依然会进行退出车道线的判断
+    }
+}
+
+
+void TCP_Sender::RunGoal_v2()
+{
+    //如果成功到达某个目标点那就前往下一个目标点
+    //出发点 -> 装载点 -> 交通灯停止线 -> （由话题回调函数控制，在交通灯停止线等待绿灯） -> 卸载区 ->
+    //(车道线 -> 发送请求视觉控制 ->（若请求成功则开始检测是否退出车道线） -> 车道线外面: 这个过程中状态都是reach) -> 出发点
+    // ROS_INFO_STREAM("run goal state:"<<robotState.goalstate);
+    if(this->robot_local_state.goalState == reach)//成功到达某个目标点
+    {
+        // ROS_INFO_STREAM("reach:");
+        this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
+        switch (this->robot_local_state.location)
+        {
+        case start:
+        {
+            //前往getGood point
+            this->UpdateRobotLocation(starttoload);
+            this->UpdateRobotCurruentGoal(goal_load);
+            break;
+        }
+        case load:
+        {
+            if(this->robot_local_state.autoGoalControl)//只有开启autogoalcontrol之后才可以一到达装货区就发布去停止线的goal，否则要我们手动发布
+            {
+                this->UpdateRobotLocation(loadtounload);
+                this->UpdateRobotCurruentGoal(unload);
+            }
+            else{
+                ROS_INFO_NAMED("TCP_Sender", "机器人已经到达了装货区，请发布下一个目标点");
+            }
+            //开启红绿灯探测
+            this->OpenTflDet();
+            break;
+        }
+        case tfl:
+        {
+            //todo
+            //如果到达停止线说明现在一定是红灯，没有别的情况会这样了
+            ROS_INFO_NAMED("TCP_Sender", "机器人到达了停止线，正在等待绿灯...");
+            break;
+        }
+        case unload:
+        {
+            // moveBaseActionClientPtr->sendGoal(startPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            // robotState.robotlocation = unloadtostart;
+            // robotState.goalstate = active;
+            // ROS_INFO("going to start");
+            // ROS_INFO_STREAM("GOAL: x:"<<startPoint.target_pose.pose.position.x<<" y:"<<startPoint.target_pose.pose.position.y<<" z:"<<startPoint.target_pose.pose.orientation.z);
+            if(this->robot_local_state.autoGoalControl)//只有开启autogoalcontrol之后才可以一到卸货区就发布去roalline的goal，否则要我们手动发布
+            {
+                this->UpdateRobotLocation(loadtounload);
+                this->UpdateRobotCurruentGoal(goal_roadlinestart);
+            }
+            else{
+                ROS_INFO_NAMED("TCP_Sender", "机器人到达了卸货区，清发布下一个目标点");
+            }
+            //关闭红绿灯探测
+            this->StopTflDet();
+            // this->OpenRLDet();
+            break;
+        }
+        case roadlinestart:
+        {
+            //开启车道线探测
+            this->OpenRLDet();//顺便改状态
+            break;
+        }
+        //todo...............
+        case roadline:
+        {
+            ROS_INFO_NAMED("TCP_Sender", "机器人正在被视觉控制中...");
+            //视觉接管控制
+            // ROS_INFO("in road line");
+            //在前面的 call back 已经请求过一次service，若果失败了这边才会再次请求
+            // if(!robotState.inRoadLine){
+
+            //     // roadLineControl();
+
+            //     // std_msgs::Float32 data;
+            //     // data.data = 1;
+            //     // roadlineControlPuber.publish(data);
+            //     qingzhou_bringup::app req;
+            //     req.request.statue = 1;
+            //     if(visioncontrolclient.call(req))
+            //     {
+            //         robotState.inRoadLine=true;//神经网络接手控制
+            //         robotStatusMsg.roadlineStatus = 2;
+            //         ROS_INFO("call vison control service success!");
+            //     }
+            //     else
+            //     {
+            //         ROS_INFO("call vison control service failed!，robot will try to call this service again");
+            //     }
+
+            // }
+            break;
+        }
+        case roadlineout:
+        {
+            this->UpdateRobotLocation(unloadtostart);
+            this->UpdateRobotCurruentGoal(goal_start);
+            // this->ExecGoal();
+            break;
+        }
+
+        default:
+        {
+            //print curruent location todo
+            ROS_ERROR_NAMED("TCP_Sender", "something worong happened, robot have reach an unknown area!");
+            break;
+        }
+        }
+        this->ExecGoal();
+    }
+    else if(robotState.goalstate == aborted) //如果目标在中途异常停止
+    {
+        // ROS_INFO_STREAM("abort:");
+        ROS_INFO_STREAM_NAMED("TCP_Sender", "无法达到目标点，即将重新发布目标点");
+        this->_PrintCurruentLocation();
+        switch (robotState.robotlocation)
+        {
+        case starttoload:
+        {
+            moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.goalstate = active;
+            ROS_INFO("robot can't reach the goal, try to go load again");
+            ROS_INFO_STREAM("GOAL: x:"<<getGoodsPoint.target_pose.pose.position.x<<" y:"<<getGoodsPoint.target_pose.pose.position.y<<" z:"<<getGoodsPoint.target_pose.pose.orientation.z);
+            break;
+        }
+        case tfltounload:
+        {
+            moveBaseActionClientPtr->sendGoal(throwGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.goalstate = active;
+            ROS_INFO("robot can't reach the goal, try to go unload again");
+            ROS_INFO_STREAM("GOAL: x:"<<throwGoodsPoint.target_pose.pose.position.x<<" y:"<<throwGoodsPoint.target_pose.pose.position.y<<" z:"<<throwGoodsPoint.target_pose.pose.orientation.z);
+            break;
+        }
+        case loadingtotfl:
+        {
+            moveBaseActionClientPtr->sendGoal(trafficLightStopLine,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.goalstate = active;
+            ROS_INFO("robot can't reach the goal, try to go to tfl again");
+            ROS_INFO_STREAM("GOAL: x:"<<trafficLightStopLine.target_pose.pose.position.x<<" y:"<<trafficLightStopLine.target_pose.pose.position.y<<" z:"<<trafficLightStopLine.target_pose.pose.orientation.z);
+            break;
+        }
+        case unloadtoroadline:{
+            moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.goalstate = active;
+            ROS_INFO("robot can't reach the goal, try to go to roadline again");
+            ROS_INFO_STREAM("GOAL: x:"<<lineStart.target_pose.pose.position.x<<" y:"<<lineStart.target_pose.pose.position.y<<" z:"<<lineStart.target_pose.pose.orientation.z);
+            break;
+        }
+        case unloadtostart:{
+            moveBaseActionClientPtr->sendGoal(startPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+            robotState.goalstate = active;
+            ROS_INFO("robot can't reach the goal, try to go to start area again");
+            ROS_INFO_STREAM("GOAL: x:"<<startPoint.target_pose.pose.position.x<<" y:"<<startPoint.target_pose.pose.position.y<<" z:"<<startPoint.target_pose.pose.orientation.z);
+            break;
+        }
+        default:
+        {
+            ROS_ERROR_NAMED("TCP_Sender", "something worong happened, robot have reach an unknown area!");
+            break;
+        }
+        }
+    }
+    else if(robotState.goalstate == active)
+    {
+        //正在执行goal
+
+        //这边是变前进变检测车道线，不太稳定，已经改成了前往车道线出发点的方法
+        // ROS_INFO_STREAM("active:");
+        // if(false)//if havedetectedRL
+        // {
+        //     moveBaseActionClientPtr->sendGoal(lineStart,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2));
+        //     robotState.robotlocation = unloadtoroadline;
+        //     robotState.goalstate = active;
+        //     ROS_INFO("detect road line firstly and chanage goal to go to roadline");
+        //     ROS_INFO_STREAM("GOAL: x:"<<lineStart.target_pose.pose.position.x<<" y:"<<lineStart.target_pose.pose.position.y<<" z:"<<lineStart.target_pose.pose.orientation.z);
+        // }
+
+        //pass
+    }
+    else if(robotState.goalstate == lost)
+    {
+        ROS_INFO("这是第一次发布目标点，机器人会前往装载货区");
+        moveBaseActionClientPtr->sendGoal(getGoodsPoint,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2),boost::bind(&TCP_Sender::GoalActiveCB,this));
+        robotState.goalstate = active;
+        robotState.robotlocation = starttoload;
+        ROS_INFO_STREAM("Setted GOAL: x:" << getGoodsPoint.target_pose.pose.position.x << " y:" << getGoodsPoint.target_pose.pose.position.y << " z:" << getGoodsPoint.target_pose.pose.orientation.z);
+        this->_PrintCurruentLocation();//打印当前的区域
+    }
+    else{
+        ROS_ERROR_NAMED("TCP_Sender", "something worong happened, robot have been an unknown goal state!"); 
+    }
+    
+    robotStatusMsg.robotstateMsg = this->robotState;//更新robotstate到上位机
+
+}
+
+bool TCP_Sender::ClearCostmapAndWait()
+{
+    std_srvs::Empty req;
+    if (clearCostmapClient.call(req)) {
+        ROS_INFO_NAMED("TCP_Sender", "清除代价地图成功!");
+        //在转角的时候路径规划没有考虑障碍物？
+        ROS_INFO_NAMED("TCP_Sender", "Sleep 1.0s 等待代价地图重新构建)");
+        sleepDur = ros::Duration(1.0);
+        sleepDur.sleep();
+        ROS_INFO_NAMED("TCP_Sender", "等待结束");
+        return true;
+    }
+    else
+    {
+        ROS_INFO_NAMED("TCP_Sender", "清除代价地图成功失败");
+        return false;
+    }
 }
