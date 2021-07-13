@@ -21,9 +21,10 @@ DistThreshold =  5000   # 颜色距离阈值
 
 def JudgeLightColor(Light):
 	Dist = np.empty((0,))
+	print("Dist: {}".format(Dist))
 	for Color in Colors:
-		Dist = np.append(Dist, np.sum(abs(Color - Light) ** 2))
-	return np.argmin(Dist), np.min(Dist)
+		Dist = np.append(Dist, np.sum(abs(Color - Light) ** 2)) #**代表乘方
+	return np.argmin(Dist), np.min(Dist) #np.argmin 返回列表Dist中最小值的索引，np.min返回列表Dist中的最小值
 
 
 def TrafficLight(MarkerROI, Img):

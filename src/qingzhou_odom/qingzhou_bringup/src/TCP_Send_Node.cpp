@@ -67,7 +67,7 @@ int main(int argc, char **  argv)
                     case 0x03://改变目标
                     {
                         ROS_INFO_NAMED("TCP_Sender_Node","update goal");
-                        tcpsender->UpdateRobotCurruentGoal(robotControlMsg.location);
+                        tcpsender->UpdateRobotCurruentGoal(robotControlMsg.curruentGoal);
                         ROS_INFO_NAMED("TCP_Sender_Node","updated!");
 
                         /**********v1*******

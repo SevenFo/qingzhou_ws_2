@@ -1,0 +1,31 @@
+GlobalPlanner:                                  # Also see: http://wiki.ros.org/global_planner
+  old_navfn_behavior: false                      # Exactly mirror behavior of navfn, use defaults for other boolean parameters, default false
+  use_quadratic: true                           # Use the quadratic approximation of the potential. Otherwise, use a simpler calculation, default true
+                                                #设置为true,将使用二次函数近似函数,否则使用更加简单的计算方式,这样节省硬件计算资源.
+
+  use_dijkstra: false                           # Use dijkstra's algorithm. Otherwise, A*, default true
+  
+  use_grid_path: false                          # Create a path that follows the grid boundaries. Otherwise, use a gradient descent method, default false
+                                                #如果设置为true,则会规划一条沿着网格边界的路径,偏向于直线穿越网格,否则将使用梯度下降算法,路径更为光滑点.
+
+  allow_unknown: true                          # Allow planner to plan through unknown space, default true
+                                                #是否允许规划器规划穿过未知区域的路径,只设计该参数为true还不行,
+                                                #还要在costmap_commons_params.yaml中设置track_unknown_space参数也为true才行。
+
+
+                                                # Needs to have track_unknown_space: true in the obstacle / voxel layer (in costmap_commons_param) to work
+  planner_window_x: 0.0                         # default 0.0
+  planner_window_y: 0.0                         # default 0.0
+  default_tolerance: 0.5                        # If goal in obstacle, plan to the closest point in radius default_tolerance, default 0.0
+                                                #当设置的目的地被障碍物占据时,需要以该参数为半径寻找到最近的点作为新目的地点.
+
+  publish_scale: 100                            # Scale by which the published potential gets multiplied, default 100
+  planner_costmap_publish_frequency: 0.0        # 全局规划代价地图发布频率    default 0.0
+  
+  lethal_cost: 253                              # 致命代价值,默认是设置为253,可以动态来配置该参数.    default 253
+  neutral_cost: 66                              # 中等代价值,默认设置是50,可以动态配置该参数.   default 50
+  cost_factor: 0.55                             # 代价地图与每个代价值相乘的因子.   Factor to multiply each cost from costmap by, default 3.0
+  publish_potential: true                       # 是否发布costmap的势函数.  Publish Potential Costmap (this is not like the navfn pointcloud2 potential), default true
+
+
+  planner_frequency: 0.0 #The rate in Hz at which to run the global planning loop. If the frequency is set to 0.0, the global planner will only run when a new goal is received or the local planner reports that its path is blocked. New in navigation 1.6.0

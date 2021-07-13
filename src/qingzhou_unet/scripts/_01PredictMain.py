@@ -31,7 +31,7 @@ def gstreamer_pipeline(
 		# display_height=480,
 		display_width=640,
 		display_height=480,
-		framerate=10,
+		framerate=8,
 		flip_method=0,
 ):
 	return (
@@ -88,7 +88,7 @@ def line():
     net.eval()
     print("loaded net")
     while(not rospy.is_shutdown()):
-        time1 = time.time()
+        # time1 = time.time()
         ret,Img = ImgPaths.read()
         # time2 = time.time()
         # print("get img: {}".format(time2-time1))
@@ -102,17 +102,17 @@ def line():
         # print("get undistimg: {}".format(time2-time1))
         # time1 = time.time()
         WarpedImg = cv2.warpPerspective(UndistImg, H, (1000, 1000)) #变换后的图像
-        time2 = time.time()
-        print("get warpedimg: {}".format(time2-time1))
+        # time2 = time.time()
+        # print("get warpedimg: {}".format(time2-time1))
         # 读取图片
-        time1 = time.time()
+        # time1 = time.time()
         b, g, r = cv2.split(WarpedImg)
         WarpedImg = cv2.merge([r, g, b])
         WarpedImg = Image.fromarray(WarpedImg)
         img_tensor = ValImgTransform(WarpedImg)
-        time2 = time.time()
-        print("warpedimg to img_tensor: {}".format(time2-time1))
-        time1 = time.time()
+        # time2 = time.time()
+        # print("warpedimg to img_tensor: {}".format(time2-time1))
+        # time1 = time.time()
         # 转为tensor
         # img_tensor = torch.from_numpy(WarpedImg)
         # plt.imshow(np.array(img_tensor).transpose(1, 2, 0))
@@ -122,24 +122,24 @@ def line():
         # img_tensor  = cv2.resize(img_tensor , (640, 480))
         # print(img_tensor.shape)
         img_tensor = img_tensor.reshape(1, 3, 128, 128)
-        time2 = time.time()
-        print("pred before: {}".format(time2-time1))
+        # time2 = time.time()
+        # print("pred before: {}".format(time2-time1))
         # print(img_tensor.shape)
         # 预测
-        time1 = time.time()
+        # time1 = time.time()
         pred = net(img_tensor)
-        time2 = time.time()
-        print("pred: {}".format(time2-time1))
+        # time2 = time.time()
+        # print("pred: {}".format(time2-time1))
         # print(pred.shape)
         # 提取结果
-        time1  =time.time()
+        # time1  =time.time()
         pred = np.array(pred.data.cpu()[0])[0]
         # 处理结果
         # print(pred.shape)
         pred = (Normalization(pred) * 255).astype(np.uint8) #这个pred是灰度图 
         # pred = cv2.cvtColor(pred, cv2.COLOR_GRAY2RGB)#灰度图转RGB
         # pred =  cv2.adaptiveThreshold(pred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY, 25, 10)#二值化
-        cv2.imshow('pred',pred) #查看二值的图像#####################
+        cv2.imshow('pred',pred) #查看灰度的图像#####################
         cv2.waitKey(1)         
 # ######################找线中心点###################################
 #         num_lane_point = 10
@@ -190,7 +190,7 @@ def line():
                 print('control_num_1 = %d' %control_num_1)
             # if center[1] > 40 and center[1] < 50 and center_num >1: #前面第二个中心点还有没有值
         time2 = time.time()
-        print("pred after: {}".format(time2-time1))
+        # print("pred after: {}".format(time2-time1))
         if control_num_1 == 999 :
             print('out of the line!!!')
         else :
@@ -201,7 +201,7 @@ def line():
         if(control_num_1 != 999):
             print("vision controling...")
             cmdData.linear.x = 0.2
-            cmdData.angular.z = -(control_num_1*1.1+0.9/180.0*3.1415926)
+            cmdData.angular.z = -((control_num_1*1.1+0.9)/180.0*3.1415926)
             cmdpub.publish(cmdData)
         else:
             cmdData.linear.x = 0.0

@@ -17,18 +17,18 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     clearCostmapFirstlyClient = nh.serviceClient<std_srvs::Empty>("/clear_cost_map");
     clearCostmapClient = nh.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
 
-    *updateStateTimer = nh.createTimer(ros::Duration(0.1),&TCP::updateStateTimerCB,this);
+    updateStateTimer = nh.createTimer(ros::Duration(0.1),boost::bind(&TCP_Sender::UpdateStateTimerCB,this),false,false);
 
 
     robotState.goalstate = lost;
     robotState.robotlocation = start;
-    robotState.inRoadLine = false;
+    // robotState.inRoadLine = false;
     robotState.autoGoalControl = false;//比赛规则不允许自动发布目标点
     robotState.openTflDet = false;
     // robotState.roadLineOut = false;
     pianyibefore = 1;
     outcount = 0;
-    haveDetectedTfl = false;
+    // haveDetectedTfl = false;
     sleepDur = ros::Duration(1);
     std::cout<<"creatededed"<<std::endl;
     cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",50);
@@ -64,7 +64,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 TCP_Sender::~TCP_Sender()
 {
     delete moveBaseActionClientPtr;
-    delete updateStateTimer;
+    // delete updateStateTimer;
 }
 
 void TCP_Sender::SubBettaryInfoCB(const std_msgs::Float32::ConstPtr &msg)
@@ -100,7 +100,7 @@ void TCP_Sender::SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped:
 void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
 {
     // robotStatusMsg.trafficLight = (int)(msg.get()->x);
-    this->robot_local_state.trafficLightColor = (int)(msg.get()->x);
+    this->robot_local_state.trafficLightColor = (TRAFFICLIGHT)((int)(msg.get()->x));
     // ROS_INFO_STREAM("tfl data: "<<robotStatusMsg.trafficLight);
     // if(!haveDetectedTfl)//如果还没还没有检测到交通灯，那就执行下面的程序，检测话题值
     // {
@@ -538,8 +538,9 @@ bool TCP_Sender::SocketInit()//初始化SOCKET
         std::cout<<"error: socket accept failed"<<std::endl;
         return false;
     }
-    std::cout<<"log: connected to client"<<std::endl; 
-    if(ConvertToUnlocked())//转化成非阻塞
+    std::cout<<"log: connected to client"<<std::endl;
+    this->updateStateTimer.start();
+    if (ConvertToUnlocked()) //转化成非阻塞
         return true;
     else
         return false;
@@ -598,10 +599,10 @@ void TCP_Sender::roadLineControl()
 {
     float k = 0.80837;//系数
     float b = 3.48970;
-    float angle = robotState.roadLinePianyi*k + b;
+    // float angle = robotState.roadLinePianyi*k + b;
     geometry_msgs::Twist cmdData;
     cmdData.linear.x = 0.3;
-    cmdData.angular.z = angle/180*3.1415926;
+    // cmdData.angular.z = angle/180*3.1415926;
     cmdvelPuber.publish(cmdData);     
 }
 
@@ -844,7 +845,7 @@ bool TCP_Sender::SwitchTflControl()
 
 void TCP_Sender::UpdateLocation(rcm &data)
 {
-    this->robotState.robotlocation = data.robotstateMsg.robotlocation;
+    // this->robotState.robotlocation = data.robotstateMsg.robotlocation;
     ROS_INFO_STREAM_NAMED("TCP_Sender", "robot location has been change to " << this->_EmumTranslator(this->robotState.robotlocation));
 }
 
@@ -853,9 +854,9 @@ void TCP_Sender::ExecUserGoalAndUpdateLocation(rcm &data)
     //update location
     this->UpdateLocation(data);
     this->userPoint.target_pose.header.frame_id = "map";
-    this->userPoint.target_pose.pose.position.x = data.userPointX;
-    this->userPoint.target_pose.pose.position.y = data.userPointY;
-    this->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(data.userPointZ);
+    // this->userPoint.target_pose.pose.position.x = data.userPointX;
+    // this->userPoint.target_pose.pose.position.y = data.userPointY;
+    // this->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(data.userPointZ);
     ROS_INFO("Excuating user goal");
 
     this->userPoint.target_pose.header.stamp = ros::Time::now();
@@ -913,7 +914,10 @@ void TCP_Sender::ExecGoal()
     tmp.target_pose.header.frame_id = "map";
     tmp.target_pose.pose.position.x = robot_local_state.goalList[robot_local_state.curruentGoal].x;
     tmp.target_pose.pose.position.y = robot_local_state.goalList[robot_local_state.curruentGoal].y;
-    tmp.target_pose.pose.orientation = tf::createQuaternionFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z);
+    tmp.target_pose.pose.orientation.x = tf::createQuaternionFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z).getX();
+    tmp.target_pose.pose.orientation.y = tf::createQuaternionFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z).getY();
+    tmp.target_pose.pose.orientation.z = tf::createQuaternionFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z).getZ();
+    tmp.target_pose.pose.orientation.w = tf::createQuaternionFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z).getW();
     ROS_INFO_NAMED("TCP_Sender", "机器人将前往：xxx");
 
     tmp.target_pose.header.stamp = ros::Time::now();
@@ -935,7 +939,7 @@ void TCP_Sender::UpdateRobotCurruentGoal(ROBOTGOALPOINT goal)
 }
 
 
-void TCP_Sender::OpenRLDet()
+bool TCP_Sender::OpenRLDet()
 {
     qingzhou_bringup::app req;
     req.request.statue = 1;
@@ -954,7 +958,7 @@ void TCP_Sender::OpenRLDet()
     }
 }
 
-void TCP_Sender::StopRLDet()
+bool TCP_Sender::StopRLDet()
 {
     qingzhou_bringup::app req;
     req.request.statue = 2;
@@ -969,12 +973,14 @@ void TCP_Sender::StopRLDet()
         {
             //say something
         }
+        return true;
     }
     else
     {
         ROS_INFO("停止车道线控制失败");
         this->robot_local_state.openRoadLineDet = true;
         //如果请求服务失败，robotState.inRoadLine 依然被设置为true，依然会进行退出车道线的判断
+        return false;
     }
 }
 
@@ -1130,7 +1136,7 @@ void TCP_Sender::UpdateRobotGoalList(std::vector<point3d> &goalList)
     ROS_INFO_NAMED("TCP_Sender", "更新完成");
 }
 
-void TCP_Sender::updateStateTimerCB()
+void TCP_Sender::UpdateStateTimerCB()
 {
     robotStatusMsg.goalstate = robot_local_state.goalState;
     robotStatusMsg.robotlocation = robot_local_state.location;

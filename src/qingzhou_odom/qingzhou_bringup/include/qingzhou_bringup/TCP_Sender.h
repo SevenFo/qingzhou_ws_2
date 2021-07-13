@@ -28,22 +28,6 @@
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseActionClient;
 
 
-//准备废弃使用
-typedef struct RobotState
-{
-    GOALSTATE goalstate;
-    ROBOTLOCATION robotlocation;
-    bool autoGoalControl;//控制是否自动连续发布目标点
-    bool openTflDet;
-
-    RobotState():
-        goalstate(0),
-        robotlocation(0),
-        autoGoalControl(false),
-        openTflDet(false){
-        //init
-    }
-}robotstate;
 
 
 enum TRAFFICLIGHT{red = 0,green = 1,yellow = 2};
@@ -81,6 +65,23 @@ typedef struct Point3D{
     float z;
 }point3d;
 
+//准备废弃使用
+typedef struct RobotState
+{
+    GOALSTATE goalstate;
+    ROBOTLOCATION robotlocation;
+    bool autoGoalControl;//控制是否自动连续发布目标点
+    bool openTflDet;
+
+    RobotState():
+        goalstate(lost),
+        robotlocation(start),
+        autoGoalControl(false),
+        openTflDet(false){
+        //init
+    }
+}robotstate;
+
 
 typedef struct RobotLocalState
 {
@@ -92,7 +93,7 @@ typedef struct RobotLocalState
     bool autoGoalControl; //控制是否自动连续发布目标点
     bool openTflDet;
     bool openRoadLineDet;
-    RobotLocalState():location(0),curruentGoal(0),goalState(0),autoGoalControl(false),openTflDet(false),openRoadLineDet(false)
+    RobotLocalState():location(start),curruentGoal(goal_load),goalState(lost),autoGoalControl(false),openTflDet(false),openRoadLineDet(false)
     {
         goalList.clear();
     }
@@ -101,11 +102,13 @@ typedef struct RobotLocalState
 typedef struct RobotControlMsg //ros 发送过来的消息结构体
 {
     /* data */
+    float linearSpeed;//线速度，x
+    float angularSpeed;//角速度
     int controlFunctionSelector;
     std::vector<point3d> goalList;
     ROBOTLOCATION location;
     ROBOTGOALPOINT curruentGoal;
-    RobotControlMsg() : controlFunctionSelector(0), location(0)
+    RobotControlMsg() : controlFunctionSelector(0), location(start)
     {
         goalList.clear();
     }
@@ -155,8 +158,7 @@ typedef struct RobotStatusMsg//？？？
     bool openTflDet;
     bool openRoadLineDet;
 
-    robotstateMsg():
-        bettary(0),
+    RobotStatusMsg():bettary(0),
         linearSpeed(0),
         angularSpeed(0),
         locationX(0),
@@ -166,13 +168,13 @@ typedef struct RobotStatusMsg//？？？
         locationInMapX(0),
         locationInMapY(0),
         trafficLight(-1),
-        goalstate(0),
-        robotlocation(0),
+        goalstate(lost),
+        robotlocation(start),
         autoGoalControl(false),
         openTflDet(false),
         openRoadLineDet(false)
         {
-            \\init
+            //init
         }
 }rsm;
 
@@ -201,7 +203,7 @@ private:
     ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
     ros::ServiceClient clearCostmapClient;//清除costmap
 
-    ros::Timer *updateStateTimer;
+    ros::Timer updateStateTimer;
 
     robotstate robotState; 
     sockaddr_in addrClient;
@@ -216,7 +218,7 @@ private:
     float pianyibefore;
     float roadLinePianyi; //记录当前车道线的偏移量
 
-    void updateStateTimerCB();
+    void UpdateStateTimerCB();
 
     void _PrintCurruentLocation();
         
@@ -235,7 +237,7 @@ public:
     move_base_msgs::MoveBaseGoal trafficLightStopLine;
     move_base_msgs::MoveBaseGoal lineStart;
 
-    std::vector<move_base_msgs::MoveBaseGoal> goalList(5);
+    // std::vector<move_base_msgs::MoveBaseGoal> goalList(5);
 
     //**********回调函数***************
     void SubBettaryInfoCB(const std_msgs::Float32::ConstPtr &msg);

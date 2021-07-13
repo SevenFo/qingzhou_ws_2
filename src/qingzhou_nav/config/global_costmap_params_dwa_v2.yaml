@@ -99,7 +99,7 @@ global_costmap:
   # All other costs are assigned a value between "Freespace" and "Possibly circumscribed" depending on their distance from a "Lethal" cell and the decay function provided by the user.
   # The rationale behind these definitions is that we leave it up to planner implementations to care or not about the exact footprint, yet give them enough information that they can incur the cost of tracing out the footprint only in situations where the orientation actually matters.
   inflation_layer: 
-    inflation_radius: 0.2 #default 0.55 # The radius in meters to which the map inflates obstacle cost values.
+    inflation_radius: 0.55 #default 0.55 # The radius in meters to which the map inflates obstacle cost values.
     cost_scaling_factor: 10.0 #default 10
     # A scaling factor to apply to cost values during inflation.
     # The cost function is computed as follows for all cells in the costmap further than the 
