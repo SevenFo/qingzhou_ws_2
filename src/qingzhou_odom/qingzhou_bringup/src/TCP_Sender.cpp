@@ -1,7 +1,7 @@
 #include "TCP_Sender.h"
 #include "math.h"
 
-TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler))
+TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 {
     nh = nodeHandler;//获取节点句柄
 
