@@ -100,7 +100,10 @@ def line():
         img_tensor = img_tensor.reshape(1, 3, 128, 128)
         # print(img_tensor.shape)
         # 预测
+        time1 = time.time()
         pred = net(img_tensor)
+        time2 = time.time()
+        print("pred: {}".format(time2-time1))
         # print(pred.shape)
         # 提取结果
         pred = np.array(pred.data.cpu()[0])[0]

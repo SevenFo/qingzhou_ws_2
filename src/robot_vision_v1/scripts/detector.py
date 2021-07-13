@@ -18,14 +18,14 @@ from _02CalculatePositon import *
 from _03TrafficLight import *
 from robot_vision.srv import app
 def gstreamer_pipeline(
-		capture_width=3264,
-		capture_height=2464,
-		# capture_width=1280,
-		# capture_height=720,
-		# display_width=640,
-		# display_height=480,
-		display_width=1920,
-		display_height=1080,
+		# capture_width=3264, #原来的
+		# capture_height=2464,
+		capture_width=640,
+		capture_height=480,
+		display_width=640,
+		display_height=480,
+		# display_width=1920, #原来的
+		# display_height=1080,
 		framerate=10,
 		flip_method=0,
 ):
