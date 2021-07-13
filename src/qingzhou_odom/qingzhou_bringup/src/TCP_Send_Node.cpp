@@ -2,11 +2,10 @@
 
 TCP_Sender *tcpsender;
 bool acitonSetedGoal = false;//stop 0 start 1 getGood 2 throwGood 
-rcm robotControlMsg;
+rcm robotControlMsg = rcm();
 void TimerCB(const ros::TimerEvent &e)
 {
     tcpsender->SendRobotStatusInfo();
-   // std::cout<<"log :clocked"<<std::endl;
 }
 
 int main(int argc, char **  argv)
@@ -45,7 +44,9 @@ int main(int argc, char **  argv)
                     }
                     case 0x02:
                     {
-                        ROS_INFO("set goal");
+                        ROS_INFO_NAMED("TCP_Sender_Node","set goal");
+                        tcpsender->UpdateRobotGoalList(robotControlMsg.goalList);
+                        /***************v1*********************8
                         tcpsender->startPoint.target_pose.header.frame_id = "map";
                         tcpsender->getGoodsPoint.target_pose.header.frame_id = "map";
                         tcpsender->throwGoodsPoint.target_pose.header.frame_id = "map";
@@ -59,11 +60,17 @@ int main(int argc, char **  argv)
                         tcpsender->throwGoodsPoint.target_pose.pose.position.x = robotControlMsg.throwGoodsPointX;
                         tcpsender->throwGoodsPoint.target_pose.pose.position.y = robotControlMsg.throwGoodsPointY;
                         tcpsender->throwGoodsPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.throwGoodsPointZ);
-                        ROS_INFO("seted goal");
+                        ************************/
+                        ROS_INFO_NAMED("TCP_Sender_Node","seted goal");
                         break;
                     }
-                    case 0x03://不仅改变目标还改变location
+                    case 0x03://改变目标
                     {
+                        ROS_INFO_NAMED("TCP_Sender_Node","update goal");
+                        tcpsender->UpdateRobotCurruentGoal(robotControlMsg.location);
+                        ROS_INFO_NAMED("TCP_Sender_Node","updated!");
+
+                        /**********v1*******
                         tcpsender->ExecUserGoalAndUpdateLocation(robotControlMsg);
                         // tcpsender->userPoint.target_pose.header.frame_id = "map";
                         // tcpsender->userPoint.target_pose.pose.position.x = robotControlMsg.userPointX;
@@ -73,6 +80,7 @@ int main(int argc, char **  argv)
                         // tcpsender->userPoint.target_pose.header.stamp = ros::Time::now();
                         // // tcpsender->robot
                         // tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->userPoint);
+                        **********************/
                     }
                     case 0x04:
                     {
@@ -110,7 +118,8 @@ int main(int argc, char **  argv)
                     }
                     case 0x08://update locaiton
                     {
-                        tcpsender->UpdateLocation(robotControlMsg);
+                        ROS_INFO_STREAM_NAMED("TCP_Sender_Node","try to change robot location");
+                        tcpsender->UpdateRobotLocation(robotControlMsg.location);
                         break;
                     }
                     default:
@@ -123,7 +132,7 @@ int main(int argc, char **  argv)
 
             }
             if(acitonSetedGoal)
-                tcpsender->RunGoal();
+                tcpsender->RunGoal_v2();
             rate.sleep();
 
         }

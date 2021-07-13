@@ -201,7 +201,7 @@ private:
     ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
     ros::ServiceClient clearCostmapClient;//清除costmap
 
-    
+    ros::Timer *updateStateTimer;
 
     robotstate robotState; 
     sockaddr_in addrClient;
@@ -216,7 +216,7 @@ private:
     float pianyibefore;
     float roadLinePianyi; //记录当前车道线的偏移量
 
-
+    void updateStateTimerCB();
 
     void _PrintCurruentLocation();
         
@@ -293,6 +293,8 @@ public:
     bool StopRLDet();
 
     bool ClearCostmapAndWait();
+
+    void UpdateRobotGoalList(std::vector<point3d> &goalList);
     // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
 };
 
