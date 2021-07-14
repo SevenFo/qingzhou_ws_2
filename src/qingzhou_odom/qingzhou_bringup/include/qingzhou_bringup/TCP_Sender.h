@@ -63,6 +63,12 @@ typedef struct Point3D{
     float x;
     float y;
     float z;
+    Point3D(float x = 0,float y = 0,float z = 0):x(0),y(0),z(0)
+    {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+    }
 }point3d;
 
 //准备废弃使用
@@ -85,7 +91,7 @@ typedef struct RobotState
 
 typedef struct RobotLocalState
 {
-    std::vector<point3d> goalList;
+    point3d goalList[5];
     ROBOTLOCATION location;
     ROBOTGOALPOINT curruentGoal;
     GOALSTATE goalState;
@@ -93,9 +99,9 @@ typedef struct RobotLocalState
     bool autoGoalControl; //控制是否自动连续发布目标点
     bool openTflDet;
     bool openRoadLineDet;
-    RobotLocalState():location(start),curruentGoal(goal_load),goalState(lost),autoGoalControl(false),openTflDet(false),openRoadLineDet(false)
+    RobotLocalState():location(start),curruentGoal(goal_load),goalState(lost),autoGoalControl(false),openTflDet(false),openRoadLineDet(false),
+    goalList({point3d(0,0,0),point3d(0,0,0),point3d(0,0,0),point3d(0,0,0),point3d(0,0,0)})
     {
-        goalList.clear();
     }
 } rls;
 
@@ -105,35 +111,13 @@ typedef struct RobotControlMsg //ros 发送过来的消息结构体
     float linearSpeed;//线速度，x
     float angularSpeed;//角速度
     int controlFunctionSelector;
-    std::vector<point3d> goalList;
+    point3d goalList[5];
     ROBOTLOCATION location;
     ROBOTGOALPOINT curruentGoal;
-    RobotControlMsg() : controlFunctionSelector(0), location(start)
+    RobotControlMsg() : controlFunctionSelector(0), location(start),goalList({point3d(0,0,0),point3d(0,0,0),point3d(0,0,0),point3d(0,0,0),point3d(0,0,0)})
     {
-        goalList.clear();
+        //init
     }
-    //bit0 speed control
-    //bit1 goal set
-    // float linearSpeed;//线速度，x
-    // float angularSpeed;//角速度
-    // float startPointGoalX;
-    // float startPointGoalY;
-    // float startPointGoalZ;
-    // float getGoodsPointX;
-    // float getGoodsPointY;
-    // float getGoodsPointZ;
-    // float throwGoodsPointX;
-    // float throwGoodsPointY;
-    // float throwGoodsPointZ;
-    // float userPointX;
-    // float userPointY;
-    // float userPointZ;
-    // float tflPointX;
-    // float tflPointY;
-    // float tflPointZ;
-    // float RLPointX;
-    // float RLPointY;
-    // float RLPointZ;
 }rcm;
 
 typedef struct RobotStatusMsg//？？？
@@ -212,7 +196,8 @@ private:
     rcm robotControlMsg;
     rls robot_local_state;
     bool haveDetectedRedTfl;
-    bool haveDetectRL;//是否检测到车道线 用于在进行过程中更改目标点
+    bool haveDetectedGreenTfl;
+    bool haveDetectRL;   //是否检测到车道线 用于在进行过程中更改目标点
     bool inRoadLine;     //保证当视觉开启之后就不再请求开启视觉控制的service
     int outcount;//计算偏移量为0的次数
     float pianyibefore;
@@ -230,12 +215,12 @@ public:
 
     MoveBaseActionClient * moveBaseActionClientPtr;
     ros::Publisher cmdvelPuber;
-    move_base_msgs::MoveBaseGoal startPoint;
-    move_base_msgs::MoveBaseGoal getGoodsPoint;
-    move_base_msgs::MoveBaseGoal throwGoodsPoint;
-    move_base_msgs::MoveBaseGoal userPoint;
-    move_base_msgs::MoveBaseGoal trafficLightStopLine;
-    move_base_msgs::MoveBaseGoal lineStart;
+    // move_base_msgs::MoveBaseGoal startPoint;
+    // move_base_msgs::MoveBaseGoal getGoodsPoint;
+    // move_base_msgs::MoveBaseGoal throwGoodsPoint;
+    // move_base_msgs::MoveBaseGoal userPoint;
+    // move_base_msgs::MoveBaseGoal trafficLightStopLine;
+    // move_base_msgs::MoveBaseGoal lineStart;
 
     // std::vector<move_base_msgs::MoveBaseGoal> goalList(5);
 
@@ -296,7 +281,9 @@ public:
 
     bool ClearCostmapAndWait();
 
-    void UpdateRobotGoalList(std::vector<point3d> &goalList);
+    void UpdateRobotGoalList(point3d *goalList);
+
+    std::string _EmumTranslator(ROBOTGOALPOINT goal);
     // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
 };
 

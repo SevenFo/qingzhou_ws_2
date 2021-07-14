@@ -28,7 +28,7 @@
     <!-- <rosparam file="$(find qingzhou_nav)/config/global_costmap_params_dwa.yaml" command="load" /> -->
     <rosparam file="$(find qingzhou_nav)/config/local_costmap_params_dwa_v2.yaml" command="load" /> 
     <rosparam file="$(find qingzhou_nav)/config/global_costmap_params_dwa_v2.yaml" command="load" /> 
-    <rosparam file="$(find qingzhou_nav)/config/dwa_local_planner_params_dwa.yaml" command="load" />
+    <rosparam file="$(find qingzhou_nav)/config/dwa_local_planner_params_v2.yaml" command="load" />
     <rosparam file="$(find qingzhou_nav)/config/global_planner_params_dwa.yaml" command="load" />
     <!--    <remap from="/odom" to="/odom_ekf"/> --> 
   </node>

@@ -45,7 +45,8 @@ int main(int argc, char **  argv)
                     case 0x02:
                     {
                         ROS_INFO_NAMED("TCP_Sender_Node","set goal");
-                        tcpsender->UpdateRobotGoalList(robotControlMsg.goalList);
+                        // ROS_INFO_STREAM_NAMED("TCP_Sender_Node","goal list size:"<<typeid(robotControlMsg.goalList).name());
+                        tcpsender->UpdateRobotGoalList((point3d*)&robotControlMsg.goalList);
                         /***************v1*********************8
                         tcpsender->startPoint.target_pose.header.frame_id = "map";
                         tcpsender->getGoodsPoint.target_pose.header.frame_id = "map";
