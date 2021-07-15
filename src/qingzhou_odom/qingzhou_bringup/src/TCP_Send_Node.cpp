@@ -47,41 +47,17 @@ int main(int argc, char **  argv)
                         ROS_INFO_NAMED("TCP_Sender_Node","set goal");
                         // ROS_INFO_STREAM_NAMED("TCP_Sender_Node","goal list size:"<<typeid(robotControlMsg.goalList).name());
                         tcpsender->UpdateRobotGoalList((point3d*)&robotControlMsg.goalList);
-                        /***************v1*********************8
-                        tcpsender->startPoint.target_pose.header.frame_id = "map";
-                        tcpsender->getGoodsPoint.target_pose.header.frame_id = "map";
-                        tcpsender->throwGoodsPoint.target_pose.header.frame_id = "map";
-                        //tcpsender->startPoint.target_pose.header.stamp = ros::Time::now();
-                        tcpsender->startPoint.target_pose.pose.position.x = robotControlMsg.startPointGoalX;
-                        tcpsender->startPoint.target_pose.pose.position.y = robotControlMsg.startPointGoalY;
-                        tcpsender->startPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.startPointGoalZ);
-                        tcpsender->getGoodsPoint.target_pose.pose.position.x = robotControlMsg.getGoodsPointX;
-                        tcpsender->getGoodsPoint.target_pose.pose.position.y = robotControlMsg.getGoodsPointY;
-                        tcpsender->getGoodsPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.getGoodsPointZ);
-                        tcpsender->throwGoodsPoint.target_pose.pose.position.x = robotControlMsg.throwGoodsPointX;
-                        tcpsender->throwGoodsPoint.target_pose.pose.position.y = robotControlMsg.throwGoodsPointY;
-                        tcpsender->throwGoodsPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.throwGoodsPointZ);
-                        ************************/
+  
                         ROS_INFO_NAMED("TCP_Sender_Node","seted goal");
                         break;
                     }
-                    case 0x03://改变目标
+                    case 0x03://改变目标 location 并且执行goal
                     {
                         ROS_INFO_NAMED("TCP_Sender_Node","update goal");
                         tcpsender->UpdateRobotCurruentGoal(robotControlMsg.curruentGoal);
                         ROS_INFO_NAMED("TCP_Sender_Node","updated!");
-
-                        /**********v1*******
-                        tcpsender->ExecUserGoalAndUpdateLocation(robotControlMsg);
-                        // tcpsender->userPoint.target_pose.header.frame_id = "map";
-                        // tcpsender->userPoint.target_pose.pose.position.x = robotControlMsg.userPointX;
-                        // tcpsender->userPoint.target_pose.pose.position.y = robotControlMsg.userPointY;
-                        // tcpsender->userPoint.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robotControlMsg.userPointZ);
-                        // ROS_INFO("Excuating user goal");
-                        // tcpsender->userPoint.target_pose.header.stamp = ros::Time::now();
-                        // // tcpsender->robot
-                        // tcpsender->moveBaseActionClientPtr->sendGoal(tcpsender->userPoint);
-                        **********************/
+                        tcpsender->UpdateLocation(robotControlMsg.location);
+                        tcpsender->ExecGoal();
                     }
                     case 0x04:
                     {

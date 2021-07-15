@@ -329,14 +329,15 @@ def pianyi_detect(img):
     # print(nothing_point) #打印出有没有左下角点的干扰
     # if(abs(pianyi - pianyi_befor) > 30) or pianyi_befor == -pianyi_now  or nothing_point ==1: #去除剧烈跳变和检测到左下角点
     if pianyi_befor == -pianyi_now  or nothing_point ==1: #这一句如果加上防止突变有点危险
-        pianyi_now = pianyi_befor           
+        pianyi_now = pianyi_befor       
+        print("*****检测到干扰*******")    
     pianyi_befor = pianyi_now
     # print(pianyi_now) #暂时
     return pianyi_now
-def iscontrolsubcb(data,arg):
-    global controlFlag
-    # if(data.data == 1):
-    #     controlFlag = 1
+# def iscontrolsubcb(data,arg):
+#     global controlFlag
+#     # if(data.data == 1):
+#     #     controlFlag = 1
 
 def handle_app_req(req):
     global controlFlag
@@ -368,21 +369,20 @@ if __name__ == '__main__':
     data = Vector3()
     pianyibefore = 0
     pianyicount = 0
-    pianyisamelist = [0,0,0,0,0,0,0,0]
+    pianyisamelist = [0,0,0,0,0,0,0,0]#大概需要8/40=0.2s判断车车有没有出去，可能太短了
     controlFlag = 10 #原来是10
     openColorDetector = 0 #原来是0
     global flag_traffic
     flag_traffic = 0
-    iscontrolsub = rospy.Subscriber("/is_version_cont",Float32,iscontrolsubcb,1)
+    # iscontrolsub = rospy.Subscriber("/is_version_cont",Float32,iscontrolsubcb,1)
     s = rospy.Service('/vision_control', app, handle_app_req)
     cmdData = Twist()
     cmdpub = rospy.Publisher("/cmd_vel",Twist)
-    rospy.init_node("detector")
+    rospy.init_node("detector") # 初始化ros节点
     try:
 
         rospy.loginfo("detector node is started...")
         while not rospy.is_shutdown():
-        # 初始化ros节点
             # time1 = time.time()
             ret, Img = Video.read()
             # time2 = time.time()
@@ -475,13 +475,15 @@ if __name__ == '__main__':
                 #         print("****************out****************") 
                 pianyibefore = pianyi
                 for index,value in enumerate(pianyisamelist):
-                    if(index != len(pianyisamelist)-1):
+                    if(not(index == len(pianyisamelist)-1)):#每个元素往前移动
                         pianyisamelist[index] = pianyisamelist[index+1]
-                    else:
+                    else:#列表最后一个进来
                         pianyisamelist[index] = pianyi
-                if(len(set(pianyisamelist)) == 1 and (time.time()-starttime) > 6):
+                if(len(set(pianyisamelist)) == 1):
+                    if((time.time()-starttime) > 4.5):
+                    ##4.5s前不考虑车会退出赛道 大概需要5s多  可以加一个判断如果超出赛道一定时间就判断退出
                     # print("****************out****************") #暂时
-                    pianyi = 999
+                        pianyi = 999
                     # print(time.time()-starttime)
                 # print(pianyisamelist)
                 if(controlFlag == 1):
