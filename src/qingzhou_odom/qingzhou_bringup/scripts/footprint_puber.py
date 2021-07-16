@@ -13,7 +13,8 @@ if __name__ == "__main__":
         try:
             global_costmap_hd = rospy.init_node("~")
             foot_print = Polygon()
-            foot_print.points = [Point32(0.25,0.20,0),Point32(0.27,0,0),Point32(0.25,-0.20,0),Point32(-0.25,-0.20,0),Point32(-0.25,0.20,0)]
+            # foot_print.points = [Point32(0.25,0.20,0),Point32(0.27,0,0),Point32(0.25,-0.20,0),Point32(-0.25,-0.20,0),Point32(-0.25,0.20,0)]
+            foot_print.points = [Point32(0.26,0.15,0),Point32(0.27,0,0),Point32(0.26,-0.15,0),Point32(-0.26,-0.15,0),Point32(-0.26,0.15,0)]
             global_foot_print_puber = rospy.Publisher("/move_base/global_costmap/footprint",Polygon,queue_size=1)
             local_foot_print_puber = rospy.Publisher("/move_base/local_costmap/footprint",Polygon,queue_size=1)
             global_foot_print_puber.publish(foot_print)

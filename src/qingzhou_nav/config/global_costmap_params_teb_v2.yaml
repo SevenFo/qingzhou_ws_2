@@ -1,37 +1,61 @@
-# Plugins
-local_costmap:
+
+global_costmap:
+  # Plugins
   plugins:
+    - {name: static_layer, type: "costmap_2d::StaticLayer"}
     - {name: obstacle_layer, type: "costmap_2d::ObstacleLayer"}
     - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
-  global_frame: odom
+    # - {name: cqu_layer, type: "cqu_costmap::CQULayer"}
+  global_frame: map
   robot_base_frame: base_link
   transform_tolerance: 0.5 #default 0.2s
 
   # Rate parameters
 
-  update_frequency:  7.0 #  
-  publish_frequency: 5.0 # default 0.0
+  update_frequency: 1.0 #
+  publish_frequency: 0.5 # default 0.0
 
   # Map management parameters
 
-  rolling_window: true
-  always_send_full_costmap: true 
+  rolling_window: false
+  always_send_full_costmap: false 
 
   # The following parameters can be overwritten by some layers, namely the static map layer.
   # 下面的参数会被静态地图层重写
-  width: 8.0
-  height: 8.0
-  resolution: 0.05
-  origin_x: 0.0
-  origin_y: 0.0
+  # width:
+  # height:
+  # resolution: 0.05
+  # origin_x:
+  # origin_y:
 
+  cqu_layer:
+    start_point_x: 10
+    start_point_y: 10
+    end_point_x: 15
+    end_point_y: 10
 
+  static_layer:
+    unknown_cost_value: 0 # The value for which a cost should be considered unknown when 
+                          # reading in a map from the map server. 
+                          # If the costmap is not tracking unknown space, 
+                          # costs of this value will be considered occupied. 
+                          # A value of zero also results in this parameter being unused.
+    lethal_cost_threshold: 100 # default 100
+    map_topic: map
+    first_map_only: true # Only subscribe to the first message on the map topic, ignoring all subsequent messages
+    subscribe_to_updates: false # In addition to map_topic, also subscribe to map_topic + "_updates"
+    track_unknown_space: true # If true, unknown values in the map messages are translated directly 
+                              # to the layer. Otherwise, unknown values in the map message are translated as FREE_SPACE in the layer.
+    use_maximum: false #default false # Only matters if the static layer is not the bottom layer. 
+                  # If true, only the maximum value will be written to the master costmap.
+    trinary_costmap: true # If true, translates all map message values to 
+                    # NO_INFORMATION/FREE_SPACE/LETHAL_OBSTACLE (three values). If false, a full spectrum of intermediate values is possible.
   obstacle_layer: 
     observation_sources: scan
     scan/topic: /scan
     scan/sensor_frame: base_link
     scan/observation_persistence: 0.0 # How long to keep each sensor reading in seconds. A value of 0.0 will only keep the most recent reading.
-    scan/expected_update_rate: 0.2 # default 0.0 acturally rate is 10Hz
+    scan/expected_update_rate: 5 # default 0.0 acturally rate is 10Hz
     # How often to expect a reading from a sensor in seconds. 
     # A value of 0.0 will allow infinite time between readings. 
     # This parameter is used as a failsafe to keep the navigation stack from commanding the robot
@@ -43,8 +67,8 @@ local_costmap:
     
     scan/data_type: LaserScan
     # 全局地图不更新障碍物
-    scan/clearing: true # Whether or not this observation should be used to clear out freespace.
-    scan/marking: true  # Whether or not this observation should be used to mark obstacles.
+    scan/clearing: false # Whether or not this observation should be used to clear out freespace.
+    scan/marking: false  # Whether or not this observation should be used to mark obstacles.
     scan/max_obstacle_height: 1.0 # The maximum height in meters of a sensor reading considered valid. This is usually set to be slightly higher than the height of the robot. 
     scan/min_obstacle_height: 0.0 # The minimum height in meters of a sensor reading considered valid. This is usually set to be at ground height, but can be set higher or lower based on the noise model of your sensor.
     scan/obstacle_range: 2.5 # default 2.5 marking设置为false应该不起作用?# The maximum range in meters at which to insert obstacles into the costmap using sensor data.
@@ -56,9 +80,8 @@ local_costmap:
     obstacle_range: 2.5
     raytrace_range: 3.0
 
-    # 好像不怎么关键，因为5x5的范围完全在雷达的范围之内
     ## ObstacleCostmapPlugin (These parameters are used by the ObstacleCostmapPlugin.
-    track_unknown_space: true # If false, each pixel has one of 2 states: lethal obstacle or free. 
+    track_unknown_space: false #default true # If false, each pixel has one of 2 states: lethal obstacle or free. 
                         # If true, each pixel has one of 3 states: lethal obstacle, free, or unknown.
     footprint_clearing_enabled: true # If true, the robot footprint will clear (mark as free) the space in which it travels.
     combination_method: 1

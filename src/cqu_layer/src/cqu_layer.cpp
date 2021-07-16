@@ -1,4 +1,4 @@
-#include <cqu_layer.h>
+#include <cqu_layer/cqu_layer.h>
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(cqu_costmap::CQULayer, costmap_2d::Layer)
 

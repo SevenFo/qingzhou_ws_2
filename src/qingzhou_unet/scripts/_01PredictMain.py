@@ -31,7 +31,7 @@ def gstreamer_pipeline(
 		# display_height=480,
 		display_width=640,
 		display_height=480,
-		framerate=8,
+		framerate=4,
 		flip_method=0,
 ):
 	return (
@@ -88,7 +88,7 @@ def line():
     net.eval()
     print("loaded net")
     while(not rospy.is_shutdown()):
-        # time1 = time.time()
+        time1 = time.time()
         ret,Img = ImgPaths.read()
         # time2 = time.time()
         # print("get img: {}".format(time2-time1))
@@ -139,8 +139,8 @@ def line():
         pred = (Normalization(pred) * 255).astype(np.uint8) #这个pred是灰度图 
         # pred = cv2.cvtColor(pred, cv2.COLOR_GRAY2RGB)#灰度图转RGB
         # pred =  cv2.adaptiveThreshold(pred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY, 25, 10)#二值化
-        cv2.imshow('pred',pred) #查看灰度的图像#####################
-        cv2.waitKey(1)         
+        # cv2.imshow('pred',pred) #查看灰度的图像#####################
+        # cv2.waitKey(1)         
 # ######################找线中心点###################################
 #         num_lane_point = 10
 
@@ -159,14 +159,11 @@ def line():
         width = 128
         half_width = 64
         center_num =0
+        control_num_1 = 0
         # img_out = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         img_out = pred
-        # print(img_out.shape)
-        # plt.imshow(img_out)
-        # plt.show()
-        out = 1
         for i in range(num_lane_point):         # each detected point on the lane
-            detect_height = 150 - (height - 13 - i*10) #随便写的数
+            detect_height = 150 - (height - 3 - i*10) #随便写的数
             detect_row = img_out[detect_height]
             line_line = np.where(detect_row == 255)  # extract zero pixel's index
             # print(line_line)
@@ -185,12 +182,13 @@ def line():
             # if center != None : #计算中心点的实际个数
             #     center_num = center_num +1
             #第一级控制
-            if center[1] > 30 and center[1] < 40 :  #center 每隔十个像素有一个，这个值要试！！！！
+            # print(center[1])
+            if center[1] > 20 and center[1] < 30 :  #center 每隔十个像素有一个，这个值要试！！！！
                 control_num_1 = center[0] -64
                 print('control_num_1 = %d' %control_num_1)
             # if center[1] > 40 and center[1] < 50 and center_num >1: #前面第二个中心点还有没有值
         time2 = time.time()
-        # print("pred after: {}".format(time2-time1))
+        print("pred after: {}".format(time2-time1))
         if control_num_1 == 999 :
             print('out of the line!!!')
         else :

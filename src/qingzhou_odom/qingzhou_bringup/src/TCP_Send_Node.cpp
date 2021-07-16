@@ -56,7 +56,7 @@ int main(int argc, char **  argv)
                         ROS_INFO_NAMED("TCP_Sender_Node","update goal");
                         tcpsender->UpdateRobotCurruentGoal(robotControlMsg.curruentGoal);
                         ROS_INFO_NAMED("TCP_Sender_Node","updated!");
-                        tcpsender->UpdateLocation(robotControlMsg.location);
+                        tcpsender->UpdateRobotLocation(robotControlMsg.location);
                         tcpsender->ExecGoal();
                     }
                     case 0x04:
@@ -76,7 +76,7 @@ int main(int argc, char **  argv)
                     {
                         ROS_INFO_STREAM_NAMED("TCP_Sender_Node","Swtich auto goal control flag to"<<tcpsender->SwitchAutoGoalControlFlag());
                         break;
-                    }
+                    }   
                     case 0x06:
                     {
                         if(tcpsender->SwitchVisionControl())

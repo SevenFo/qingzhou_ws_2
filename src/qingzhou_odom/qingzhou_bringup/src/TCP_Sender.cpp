@@ -134,8 +134,12 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
             //     StopVisonControl();
             // }
             //只有在车道线起点的时候才会有pianyi开启，所以哪个条件也没用了，直接STOP
-            if(this->StopRLDet())
+            std::cout << "*********stop*************" << std::endl;
+            if (this->StopRLDet())
             {
+                std::cout << "*********sleep*************" << std::endl;
+                ros::Duration(1.0).sleep();
+                std::cout << "*********set reach*************" << std::endl;
                 this->robot_local_state.goalState = reach;
             }
             else{
@@ -513,8 +517,8 @@ void TCP_Sender::ExecGoal()
     ROS_INFO_STREAM_NAMED("TCP_Sender", "robot will go to"<<this->_EmumTranslator(robot_local_state.curruentGoal)<<" and detail:"<<"x:"<<tmp.target_pose.pose.position.x<<" y:"<<tmp.target_pose.pose.position.y<<" z:"<<robot_local_state.goalList[robot_local_state.curruentGoal].z<<"qx:"<<tmp.target_pose.pose.orientation.x<<" qy:"<<tmp.target_pose.pose.orientation.y<<" qz"<<tmp.target_pose.pose.orientation.z<<" qw"<<tmp.target_pose.pose.orientation.w);
 
     tmp.target_pose.header.stamp = ros::Time::now();
-
-    this->moveBaseActionClientPtr->sendGoal(tmp,boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2),boost::bind(&TCP_Sender::GoalActiveCB,this));
+    this->robot_local_state.goalState = active;
+    this->moveBaseActionClientPtr->sendGoal(tmp, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2), boost::bind(&TCP_Sender::GoalActiveCB, this));
     ROS_INFO_NAMED("TCP_Sender", "send goal point success");
 }
 
