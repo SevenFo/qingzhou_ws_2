@@ -12,6 +12,7 @@
 #include "nav_msgs/Odometry.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "geometry_msgs/Point.h"
 #include "move_base_msgs/MoveBaseGoal.h"
 #include "move_base_msgs/MoveBaseAction.h"
 #include <actionlib/client/simple_action_client.h>
@@ -70,6 +71,23 @@ typedef struct Point3D{
         this->z = z;
     }
 }point3d;
+
+
+typedef struct SpeedPlanSub{
+    ros::Duration _dua;//花多长时间
+    geometry_msgs::Point _point;//或者到什么地点为止
+    geometry_msgs::Twist _speed;
+    SpeedPlanSub(float duaTime,float pointx,float pointy,float speedx,float speedz){
+        _dua = ros::Duration(duaTime);
+        _point.x = pointx;
+        _point.y = pointy;
+        _speed.linear.x = speedx;
+        _speed.linear.y = _speed.linear.z = 0;
+        _speed.angular.x = _speed.angular.y =  0;
+        _speed.angular.z = speedz;
+        _point.z = 0;
+    }
+}SpeedPlanPoint;
 
 //准备废弃使用
 typedef struct RobotState
@@ -190,8 +208,9 @@ private:
     ros::Publisher currentGoalPuber;
 
     ros::Timer updateStateTimer;
+    // ros::Timer countCircleTimer;
 
-    robotstate robotState; 
+    robotstate robotState;  
     sockaddr_in addrClient;
     
     rsm robotStatusMsg;//发送到上位机的机器人状态数据
@@ -205,16 +224,33 @@ private:
     float pianyibefore;
     float roadLinePianyi; //记录当前车道线的偏移量
 
+
+    float _ppstime1;
+    float _ppstime2;
+    float _ppsspeed1x;
+    float _ppsspeed1z;
+    float _ppsspeed2x;
+    float _ppsspeed2z;
+
+    ros::Time _startTime;
+    ros::Time _tmpStartTime;
+    std::vector<double> _countTimeList;
+    std::vector<double> _circleTimeList;
+    // int _entTime;
+
     void UpdateStateTimerCB();
+    // void CountCircleTimerCB();
 
     void _PrintCurruentLocation();
+
+    
         
     std::string _EmumTranslator(ROBOTLOCATION value);
 
 public:
     TCP_Sender(const ros::NodeHandle &nodeHandler);
     ~TCP_Sender();
-
+    void _RunSpeedPlan();
     MoveBaseActionClient * moveBaseActionClientPtr;
     ros::Publisher cmdvelPuber;
     // move_base_msgs::MoveBaseGoal startPoint;
