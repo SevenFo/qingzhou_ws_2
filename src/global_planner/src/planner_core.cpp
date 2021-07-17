@@ -298,7 +298,7 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     bool found_legal = planner_->calculatePotentials(costmap_->getCharMap(), start_x, start_y, goal_x, goal_y,
                                                     nx * ny * 2, potential_array_);
 
-    ROS_INFO_COND(open_debug, "planner_core: found_legal：" << found_legal);
+    ROS_INFO_STREAM_COND(open_debug, "planner_core: found_legal：" << found_legal);
 
     if (!old_navfn_behavior_)
         planner_->clearEndpoint(costmap_->getCharMap(), potential_array_, goal_x_i, goal_y_i, 2);

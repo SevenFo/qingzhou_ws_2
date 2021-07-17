@@ -13,7 +13,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);//ekf
     trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
     pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubLineCB,this);
-    movebasePoseFeedbackSuber = nh.subscribe<move_base_msgs::MoveBaseFeedback>("/move_base/feedback", 2,TCP_Sender::movebasePoseFeedbackCB ,this);
+    movebasePoseFeedbackSuber = nh.subscribe<move_base_msgs::MoveBaseActionFeedback>("/move_base/feedback", 2,&TCP_Sender::movebasePoseFeedbackCB ,this);
     visioncontrolclient = nh.serviceClient<qingzhou_bringup::app>("/vision_control");
     clearCostmapFirstlyClient = nh.serviceClient<std_srvs::Empty>("/clear_cost_map");
     clearCostmapClient = nh.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
@@ -81,10 +81,10 @@ void TCP_Sender::SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped:
     robotStatusMsg.locationInMapY = msg.get()->pose.pose.position.y;
     robotStatusMsg.locationInMapX = msg.get()->pose.pose.position.x;
 }
-void TCP_Sender::movebasePoseFeedbackCB(const move_base_msgs::MoveBaseFeedbackConstPtr &msg)
+void TCP_Sender::movebasePoseFeedbackCB(const move_base_msgs::MoveBaseActionFeedbackConstPtr &msg)
 {
     //
-    ROS_INFO_STREAM_NAMED("move_base", "movebase feedback: frame:" << msg.get()->base_position.header.frame_id);
+    // ROS_INFO_STREAM_NAMED("move_base", "movebase feedback: frame:" << msg.get()->base_p}
 }
 //v2
 void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
@@ -571,7 +571,7 @@ bool TCP_Sender::StopRLDet()
         ROS_INFO("stop RL control success");
         this->robot_local_state.openRoadLineDet = false;
         //等待一段时间后 返回导航控制状态
-        ROS_INFO_NAMED("SLEEP 1s");
+        ROS_INFO_NAMED("TCP_Sender_stopRLDet","SLEEP 1s");
         ros::Duration(1000).sleep();
         qingzhou_bringup::app req;
         req.request.statue = 0;

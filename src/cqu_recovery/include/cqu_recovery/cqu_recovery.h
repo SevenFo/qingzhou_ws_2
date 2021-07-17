@@ -50,8 +50,10 @@ namespace cqu_recovery_behavior
         }
     private:
         ros::Subscriber robotCurruentGoalSuber;
+        ros::Subscriber globalPlanSuber;
         geometry_msgs::Pose _robotCurruentGoal;
         void RobotCurruentGoalCB(const geometry_msgs::PoseStamped::ConstPtr &msg);
+        void GlobalPlanCB(const nav_msgs::Path::ConstPtr &msg);
         double CalculateKValue(geometry_msgs::Pose startp, geometry_msgs::Pose endp);
     };
 

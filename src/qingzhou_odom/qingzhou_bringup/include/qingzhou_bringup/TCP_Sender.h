@@ -234,7 +234,7 @@ public:
     void SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg);
     void SubLineCB(const  geometry_msgs::Vector3::ConstPtr &msg);
-    void movebasePoseFeedbackCB(const move_base_msgs::MoveBaseFeedbackConstPtr &msg);
+    void movebasePoseFeedbackCB(const move_base_msgs::MoveBaseActionFeedbackConstPtr &msg);
     void GoalDoneCB(const actionlib::SimpleClientGoalState &state, const move_base_msgs::MoveBaseResultConstPtr &result);
     void GoalActiveCB();//目标点激活的回调函数
 

@@ -369,7 +369,7 @@ if __name__ == '__main__':
     data = Vector3()
     pianyibefore = 0
     pianyicount = 0
-    pianyisamelist = [0,0,0,0,0,0]#大概需要8/40=0.2s判断车车有没有出去，可能太短了
+    pianyisamelist = [0,0,0,0]#大概需要4/40=0.1s判断车车有没有出去，可能太短了
     controlFlag = 10 #原来是10
     openColorDetector = 0 #原来是0
     global flag_traffic
