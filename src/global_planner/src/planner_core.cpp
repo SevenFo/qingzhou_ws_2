@@ -95,6 +95,9 @@ void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costm
 
 void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2D* costmap, std::string frame_id) {
     if (!initialized_) {
+
+        open_debug = true;
+
         ros::NodeHandle private_nh("~/" + name);
         costmap_ = costmap;
         frame_id_ = frame_id;
@@ -287,13 +290,17 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     path_maker_->setSize(nx, ny);
     potential_array_ = new float[nx * ny];
 
+    
+
     if(outline_map_)
         outlineMap(costmap_->getCharMap(), nx, ny, costmap_2d::LETHAL_OBSTACLE);
 
     bool found_legal = planner_->calculatePotentials(costmap_->getCharMap(), start_x, start_y, goal_x, goal_y,
                                                     nx * ny * 2, potential_array_);
 
-    if(!old_navfn_behavior_)
+    ROS_INFO_COND(open_debug, "planner_core: found_legal：" << found_legal);
+
+    if (!old_navfn_behavior_)
         planner_->clearEndpoint(costmap_->getCharMap(), potential_array_, goal_x_i, goal_y_i, 2);
     if(publish_potential_)
         publishPotential(potential_array_);
@@ -305,11 +312,15 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
             geometry_msgs::PoseStamped goal_copy = goal;
             goal_copy.header.stamp = ros::Time::now();
             plan.push_back(goal_copy);
+            ROS_INFO_COND(open_debug, "make plan success");
+
         } else {
             ROS_ERROR("Failed to get a plan from potential when a legal potential was found. This shouldn't happen.");
         }
     }else{
         ROS_ERROR("Failed to get a plan.");
+        ROS_INFO_COND(open_debug, "Failed to get a plan as cant find legal");
+
     }
 
     // add orientations if needed

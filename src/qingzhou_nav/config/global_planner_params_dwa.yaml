@@ -1,10 +1,10 @@
 GlobalPlanner:                                  # Also see: http://wiki.ros.org/global_planner
-  old_navfn_behavior: false                     # Exactly mirror behavior of navfn, use defaults for other boolean parameters, default false
+  old_navfn_behavior: false #换成Dstart算法试试会不会报错 NOPATH # Exactly mirror behavior of navfn, use defaults for other boolean parameters, default false
   use_quadratic: true                           # Use the quadratic approximation of the potential. Otherwise, use a simpler calculation, default true
                                                 #设置为true,将使用二次函数近似函数,否则使用更加简单的计算方式,这样节省硬件计算资源.
 
-  use_dijkstra: True                           # Use dijkstra's algorithm. Otherwise, A*, default true
-  
+  use_dijkstra: true                           # Use dijkstra's algorithm. Otherwise, A*, default true
+  #AS快一点但是不如Dstart
   use_grid_path: false                          # Create a path that follows the grid boundaries. Otherwise, use a gradient descent method, default false
                                                 #如果设置为true,则会规划一条沿着网格边界的路径,偏向于直线穿越网格,否则将使用梯度下降算法,路径更为光滑点.
 

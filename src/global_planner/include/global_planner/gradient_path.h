@@ -72,6 +72,8 @@ class GradientPath : public Traceback {
         float *gradx_, *grady_; /**< gradient arrays, size of potential array */
 
         float pathStep_; /**< step size for following gradient */
+
+        bool open_debug;
 };
 
 } //end namespace global_planner

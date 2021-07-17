@@ -5,6 +5,7 @@
 #include <costmap_2d/costmap_2d_ros.h>
 #include <boost/thread.hpp>
 #include <dynamic_reconfigure/Reconfigure.h>
+#include <move_base_msgs/MoveBaseGoal.h>
 
 namespace cqu_recovery_behavior
 {
@@ -47,9 +48,12 @@ namespace cqu_recovery_behavior
             delete _globalCostmapPtr;
             delete _localCostmapPtr;
         }
+    private:
+        ros::Subscriber robotCurruentGoalSuber;
+        geometry_msgs::Pose _robotCurruentGoal;
+        void RobotCurruentGoalCB(const geometry_msgs::PoseStamped::ConstPtr &msg);
+        double CalculateKValue(geometry_msgs::Pose startp, geometry_msgs::Pose endp);
     };
-    
-    
-    
+
 } // namespace cqu_recovery_behavious
 #endif

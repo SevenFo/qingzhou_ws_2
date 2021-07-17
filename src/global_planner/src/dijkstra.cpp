@@ -196,7 +196,7 @@ inline void DijkstraExpansion::updateCell(unsigned char* costs, float* potential
     float c = getCost(costs, n);
     if (c >= lethal_cost_)    // don't propagate into obstacles
         return;
-
+    //这里可以判断周围有没有障碍物，如果有的话就直接return补考vl设置，向上面一样，不过尝试以下Dstart + global planner 的效果把
     float pot = p_calc_->calculatePotential(potential, c, n);
 
     // now add affected neighbors to priority blocks

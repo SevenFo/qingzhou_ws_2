@@ -13,9 +13,12 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);//ekf
     trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
     pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubLineCB,this);
+    movebasePoseFeedbackSuber = nh.subscribe<move_base_msgs::MoveBaseFeedback>("/move_base/feedback", 2,TCP_Sender::movebasePoseFeedbackCB ,this);
     visioncontrolclient = nh.serviceClient<qingzhou_bringup::app>("/vision_control");
     clearCostmapFirstlyClient = nh.serviceClient<std_srvs::Empty>("/clear_cost_map");
     clearCostmapClient = nh.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
+    
+    
 
     updateStateTimer = nh.createTimer(ros::Duration(0.1),boost::bind(&TCP_Sender::UpdateStateTimerCB,this),false,false);
 
@@ -33,8 +36,9 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     outcount = 0;
     // haveDetectedTfl = false;
     sleepDur = ros::Duration(1);
-    std::cout<<"creatededed"<<std::endl;
+    // std::cout<<"creatededed"<<std::endl;
     cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",50);
+    // currentGoalPuber = nh.advertise<move_base_msgs::MoveBaseGoal>("/move_base/")
     // roadlineControlPuber = nh.advertise<std_msgs::Float32>("/is_version_cont",10);
 
     moveBaseActionClientPtr = new MoveBaseActionClient("move_base");
@@ -77,7 +81,11 @@ void TCP_Sender::SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped:
     robotStatusMsg.locationInMapY = msg.get()->pose.pose.position.y;
     robotStatusMsg.locationInMapX = msg.get()->pose.pose.position.x;
 }
-
+void TCP_Sender::movebasePoseFeedbackCB(const move_base_msgs::MoveBaseFeedbackConstPtr &msg)
+{
+    //
+    ROS_INFO_STREAM_NAMED("move_base", "movebase feedback: frame:" << msg.get()->base_position.header.frame_id);
+}
 //v2
 void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
 {
@@ -121,7 +129,7 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
     //注意，只有发送请求之后，这个话题在有值，这个回调函数才会被调用，并且这个函数是为了检测有没有退出赛道
 
     int pianyi = (msg.get()->y);
-    std::cout << "painyi: " << pianyi << std::endl;
+    // std::cout << "painyi: " << pianyi << std::endl;
     if (int(pianyi) && this->robot_local_state.openRoadLineDet) //pianyi >0 才进入 因为和红绿灯共同使用一个话题，默认情况下painyi=0
     {
         // robotState.roadLinePianyi = pianyi;
@@ -195,7 +203,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
 }
 void TCP_Sender::GoalActiveCB()
 {   
-    std::cout<<"i am in goal active callback function"<<std::endl;
+    std::cout<<"goal active"<<std::endl;
 }
 
 
@@ -363,7 +371,7 @@ void TCP_Sender::_PrintCurruentLocation() {
 }    
 
 std::string TCP_Sender::_EmumTranslator(ROBOTLOCATION value){
-    std::cout << "location value" << std::endl;
+    // std::cout << "location value" << std::endl;
     if (true)
     {
         switch (value)
@@ -562,7 +570,9 @@ bool TCP_Sender::StopRLDet()
     {
         ROS_INFO("stop RL control success");
         this->robot_local_state.openRoadLineDet = false;
-        //返回导航控制状态
+        //等待一段时间后 返回导航控制状态
+        ROS_INFO_NAMED("SLEEP 1s");
+        ros::Duration(1000).sleep();
         qingzhou_bringup::app req;
         req.request.statue = 0;
         if (visioncontrolclient.call(req))
@@ -605,7 +615,6 @@ void TCP_Sender::RunGoal_v2()
         }
         case load:
         {
-            std::cout << "********8switch load*********:"<<this->robot_local_state.autoGoalControl << std::endl;
             if (this->robot_local_state.autoGoalControl == true) //只有开启autogoalcontrol之后才可以一到达装货区就发布去停止线的goal，否则要我们手动发布
             {
                 this->UpdateRobotLocation(loadtounload);

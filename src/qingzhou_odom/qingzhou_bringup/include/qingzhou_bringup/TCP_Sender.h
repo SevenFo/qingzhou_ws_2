@@ -182,10 +182,12 @@ private:
     ros::Subscriber trafficLightSuber;
     ros::Subscriber pianyiSuber;
     ros::Subscriber locationInMapSuber;
+    ros::Subscriber movebasePoseFeedbackSuber;
     ros::Duration sleepDur;
     ros::ServiceClient visioncontrolclient;
     ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
     ros::ServiceClient clearCostmapClient;//清除costmap
+    ros::Publisher currentGoalPuber;
 
     ros::Timer updateStateTimer;
 
@@ -232,9 +234,12 @@ public:
     void SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg);
     void SubLineCB(const  geometry_msgs::Vector3::ConstPtr &msg);
-    void GoalDoneCB(const actionlib::SimpleClientGoalState& state, const move_base_msgs::MoveBaseResultConstPtr &result);
+    void movebasePoseFeedbackCB(const move_base_msgs::MoveBaseFeedbackConstPtr &msg);
+    void GoalDoneCB(const actionlib::SimpleClientGoalState &state, const move_base_msgs::MoveBaseResultConstPtr &result);
     void GoalActiveCB();//目标点激活的回调函数
+
     //********************************
+
 
     bool SocketInit();//初始化socket
     bool SendMsg(const void* dataPtr,size_t dataSize);//封装

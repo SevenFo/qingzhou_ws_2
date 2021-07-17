@@ -54,3 +54,12 @@
     8.  动态调整某些参数？ todo 
 13. 可以编辑静态地图，把他变得平滑了，现在全局规划出来的路线都挺好看的，但是卸货区那边的路线还不太行->local planner不太好用，感觉转弯转不过去
 
+
+使用OLD GLOBAL NAVIGATION会导致的问题：起始点不再机器人所在的地方，这可能导致了teb的后退？可是为什么改称新的global dwa规划不出来（代价地图？尝试取消膨胀层？）
+Note:
+
+    The start of the path does not match the actual start location.
+    The very end of the path moves along grid lines.
+    All of the coordinates are slightly shifted by half a grid cell 
+
+导航的方案一：固定全局规划路径，自己写局部规划算法，使用差值（PID）？，像车道线一样，

@@ -43,7 +43,7 @@
 namespace global_planner {
 
 GradientPath::GradientPath(PotentialCalculator* p_calc) :
-        Traceback(p_calc), pathStep_(0.5) {
+        Traceback(p_calc), pathStep_(0.5) ,open_debug(true){
     gradx_ = grady_ = NULL;
 }
 
@@ -170,6 +170,7 @@ bool GradientPath::getPath(float* potential, double start_x, double start_y, dou
 
             if (potential[stc] >= POT_HIGH) {
                 ROS_DEBUG("[PathCalc] No path found, high potential");
+                ROS_INFO_COND(open_debug, "[gradient_path:] No path found, high potential");
                 //savemap("navfn_highpot");
                 return 0;
             }
