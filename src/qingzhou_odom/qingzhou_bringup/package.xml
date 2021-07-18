@@ -76,6 +76,7 @@
   <depend>std_srvs</depend>
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>
+  <depend>tf2_ros</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

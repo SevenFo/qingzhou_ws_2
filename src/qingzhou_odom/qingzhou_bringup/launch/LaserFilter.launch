@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="qingzhou_bringup" type="LaserFilter.py" name="LaserFilter_node" output = "screen">
+        
+    </node>
+</launch>

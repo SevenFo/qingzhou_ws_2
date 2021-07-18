@@ -9,7 +9,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",5,&TCP_Sender::SubBettaryInfoCB,this);//电池电量
     speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel",50,&TCP_Sender::SubSpeedCB,this);//速度
     locationSuber = nh.subscribe<nav_msgs::Odometry>("/odom",50,&TCP_Sender::SubLocCB,this);//odom
-    locationInMapSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/amcl_pose",50,&TCP_Sender::SubLcationMapCB,this);//odom
+    // locationInMapSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/amcl_pose",50,&TCP_Sender::SubLcationMapCB,this);//odom
     ekfPoseSuber = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/robot_pose_ekf/odom_combined",50,&TCP_Sender::SubEkfPoseCB,this);//ekf
     trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
     pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubLineCB,this);
@@ -51,16 +51,14 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     moveBaseActionClientPtr = new MoveBaseActionClient("move_base");
     ROS_INFO_NAMED("TCP_Sender", "Waiting services");
     clearCostmapClient.waitForExistence();
-    
 
-
-
-
+    this->_tfListenThread = new boost::thread(boost::bind(&TCP_Sender::ListenRobotPose, this,boost::ref(this->robotPose))); //开启监听pose的线程
 }
 
 TCP_Sender::~TCP_Sender()
 {
     delete moveBaseActionClientPtr;
+    delete _tfListenThread;
     // delete updateStateTimer;
 }
 
@@ -87,19 +85,18 @@ void TCP_Sender::SubEkfPoseCB(const geometry_msgs::PoseWithCovarianceStamped::Co
     robotStatusMsg.ekfX = msg.get()->pose.pose.position.x;
     robotStatusMsg.ekfY = msg.get()->pose.pose.position.y;
 }
-void TCP_Sender::SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
-{
-    robotStatusMsg.locationInMapY = msg.get()->pose.pose.position.y;
-    robotStatusMsg.locationInMapX = msg.get()->pose.pose.position.x;
-}
+// void TCP_Sender::SubLcationMapCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg)
+// {
+
+// }
 void TCP_Sender::movebasePoseFeedbackCB(const move_base_msgs::MoveBaseActionFeedbackConstPtr &msg)
 {
     //
-    tf::Quaternion _q;
-    tf::quaternionMsgToTF(msg.get()->feedback.base_position.pose.orientation, _q);
-    double x, y, z;
-    tf::Matrix3x3(_q).getRPY(x, y, z);
-    ROS_INFO_STREAM_NAMED("move_base", "movebase feedback: frame:" << msg.get()->feedback.base_position.header.frame_id<<" x:"<<msg.get()->feedback.base_position.pose.position.x<<" y:"<<msg.get()->feedback.base_position.pose.position.y<<" z:"<<z);
+    // tf::Quaternion _q;
+    // tf::quaternionMsgToTF(msg.get()->feedback.base_position.pose.orientation, _q);
+    // double x, y, z;
+    // tf::Matrix3x3(_q).getRPY(x, y, z);
+    // ROS_INFO_STREAM_NAMED("move_base", "movebase feedback: frame:" << msg.get()->feedback.base_position.header.frame_id<<" x:"<<msg.get()->feedback.base_position.pose.position.x<<" y:"<<msg.get()->feedback.base_position.pose.position.y<<" z:"<<z);
 }
 
 //v2
@@ -205,11 +202,11 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
             this->UpdateRobotLocation(start);
             this->_circleTimeList.push_back((ros::Time::now()-this->_startTime).toSec());
             std::cout<<"|||||||||CIRCUL TIME:"<<this->_circleTimeList.back()<<"|||||||||"<<std::endl;
-            std::cout << "-----------------TIME COUNTER----------------";
+            std::cout << "-----------------TIME COUNTER----------------"<<std::endl;
             this->_startTime = ros::Time::now();
             for (int i = 0; i < this->_circleTimeList.size();i++)
                 std::cout << " | " << i << " circle:" << this->_circleTimeList.at(i) << std::endl;
-            std::cout << "-----------------============----------------";
+            std::cout << "-----------------============----------------"<<std::endl;
             break;
             }
         case loadingtotfl:{this->UpdateRobotLocation(tfl);break;}
@@ -809,8 +806,11 @@ void TCP_Sender::UpdateStateTimerCB()
     robotStatusMsg.openTflDet = robot_local_state.openTflDet;
     robotStatusMsg.openRoadLineDet = robot_local_state.openRoadLineDet;
     robotStatusMsg.trafficLight = robot_local_state.trafficLightColor;
+    robotStatusMsg.locationInMapY = this->robotPose.position.y;
+    robotStatusMsg.locationInMapX = this->robotPose.position.x;
+    // ros::Duration
+    // ROS_INFO_STREAM_NAMED("tcp_sender:", "robotpose: x:" << this->robotPose.position.x << " y:" << this->robotPose.position.y);
 }
-
 
 void TCP_Sender::_RunSpeedPlan()
 {
@@ -823,5 +823,38 @@ void TCP_Sender::_RunSpeedPlan()
     {
         cmdvelPuber.publish(spp._speed);
         spp._dua.sleep();
+    }
+}
+
+void TCP_Sender::ListenRobotPose(geometry_msgs::Pose &robotPose)
+{
+
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener listen(tfBuffer);
+    geometry_msgs::TransformStamped tfs;
+    ros::Duration dua(0.05);
+    boost::mutex robotposeMutex;
+    // robotposeMutex.unlock();
+    std::string err;
+    while (ros::ok())
+    {
+
+        if(tfBuffer.canTransform("base_link", "map",ros::Time(0),&err))
+        {
+            tfs = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
+            robotposeMutex.lock();
+            robotPose.position.x = tfs.transform.translation.x;
+            robotPose.position.y = tfs.transform.translation.y;
+            robotPose.orientation = tfs.transform.rotation;
+            robotposeMutex.unlock();
+            // ROS_INFO_STREAM_NAMED("tcp_sender:", "robotpose_thread: x:" << tfs.transform.translation.x << " y:" << tfs.transform.translation.y);
+
+        }
+        else
+        {
+            //cant trasform
+            // std::cout << "tferr:" << err<<std::endl;
+        }
+        dua.sleep();
     }
 }

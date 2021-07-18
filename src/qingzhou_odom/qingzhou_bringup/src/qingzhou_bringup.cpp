@@ -57,9 +57,9 @@ actuator::actuator(ros::NodeHandle handle)
 	
     sub_move_base = handle.subscribe("cmd_vel",1,&actuator::callback_move_base,this);   
 
-    pub_imu = handle.advertise<sensor_msgs::Imu>("raw", 5);	                                                 
+    pub_imu = handle.advertise<sensor_msgs::Imu>("raw", 2);	                                                 
     pub_mag = handle.advertise<sensor_msgs::MagneticField>("imu/mag", 5);                                    
-    pub_odom = handle.advertise<nav_msgs::Odometry>("odom", 5);                                               
+    pub_odom = handle.advertise<nav_msgs::Odometry>("odom", 2);                                               
     pub_battery = handle.advertise<std_msgs::Float32>("battery",10);                                          
 }
 

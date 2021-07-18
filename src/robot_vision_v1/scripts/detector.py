@@ -53,7 +53,7 @@ openColorDetector = 0
 Frame = 1       # 从第1帧开始读取视频
 starttime = 0
 emdtime = 0
-green_flag = 0
+greenflag = 0
 Video = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
 Video.set(1, Frame)
 # 红绿灯识别
@@ -98,9 +98,11 @@ def detector(Img):
     else:
         print('no image')
 
-def turn_to_green() :
-    data.x = 1
-    green_flag = 1
+# def turn_to_green() :
+#     global greenflag
+#     greenflag = 1
+#     print('turn')
+    # print(greenflag)
 
 flag = 0
 pianyi_befor = 0
@@ -329,6 +331,7 @@ def handle_app_req(req):
     global starttime
     global endtime 
     global openColorDetector
+    global redtime
     if(req.statue == 1):
         controlFlag = 1
         starttime = time.time()
@@ -342,8 +345,9 @@ def handle_app_req(req):
     elif(req.statue == 3):
         print("++++++open color*******")
         openColorDetector = 1
-    elif(req.statue == 4):
+    elif(req.statue == 4):  
         openColorDetector = 0
+        redtime = 0
         print("++++++close color*******")
     return 0
 
@@ -354,9 +358,10 @@ if __name__ == '__main__':
     pianyicount = 0
     pianyisamelist = [0,0,0,0]#大概需要4/40=0.1s判断车车有没有出去，可能太短了
     controlFlag = 10 #原来是10
-    openColorDetector = 0 #原来是0
+    openColorDetector = 1 #原来是0
     global flag_traffic
     flag_traffic = 0
+    redtime = 0
     # iscontrolsub = rospy.Subscriber("/is_version_cont",Float32,iscontrolsubcb,1)
     s = rospy.Service('/vision_control', app, handle_app_req)
     cmdData = Twist()
@@ -390,19 +395,22 @@ if __name__ == '__main__':
                     colortype = -1
                 # time2 = time.time()
                 # print("traffic :{}".format(time2-time1))
-                vision = rospy.Publisher('/pianyi', Vector3, queue_size=1)     
-			# pub_position= rospy.Publisher('position',Vector3, queue_size=10)
-			# rate = rospy.Rate(10)
-			# while not rospy.is_shutdown():
-                # print(colortype)
+                vision = rospy.Publisher('/pianyi', Vector3, queue_size=1)   
+
                 if colortype == 0 : #红灯
-                    # print('666')
+                    # print(greenflag)
+                    # if  redtime == 15 :
+                    #     timer = threading.Timer(6,turn_to_green)
+                    #     timer.start()
+                    #     redtime = redtime + 1
+                    # elif greenflag == 1 :
+                    #     data.x = 1
+                    #     print('turn to green')
+                    # else :
+                        # print('666')
                     data.x = 0
-                    timer = threading.Timer(6,turn_to_green)
-                    timer.start()
-                    if green_flag == 1 :
-                        timer.cancel()
-                        green_flag = 0
+                        # redtime = redtime + 1
+                        # print('red')
 
                     # vision.publish(data)
                 elif colortype == 1 : #绿灯1
@@ -420,6 +428,7 @@ if __name__ == '__main__':
                 else:
                     # print("-999") #没灯
                     data.x = -999
+                    # redtime = 0 #在没灯时清零红灯的计数
                     # vision.publish(data)
                 if(openColorDetector):
                     vision.publish(data)

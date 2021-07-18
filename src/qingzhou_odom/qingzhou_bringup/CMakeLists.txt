@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   actionlib_msgs
   actionlib
+  tf2_ros
 )
 find_package(Boost REQUIRED COMPONENTS thread)
 

@@ -13,7 +13,7 @@ int main(int argc, char **  argv)
     ros::init(argc,argv,"TCP_Send_node");
     ros::NodeHandle nh("~");
     ros::Timer timer = nh.createTimer(ros::Duration(0.05),TimerCB);
-    ros::Rate rate(50);
+    ros::Rate rate(25);
     ros::Duration dsleep(5);
     tcpsender = new TCP_Sender(nh);
 

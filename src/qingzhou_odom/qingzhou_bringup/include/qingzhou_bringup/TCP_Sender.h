@@ -12,11 +12,13 @@
 #include "nav_msgs/Odometry.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "geometry_msgs/TransformStamped.h"
 #include "geometry_msgs/Point.h"
 #include "move_base_msgs/MoveBaseGoal.h"
 #include "move_base_msgs/MoveBaseAction.h"
 #include <actionlib/client/simple_action_client.h>
 #include "tf/tf.h"
+#include "tf2_ros/transform_listener.h" 
 #include "fcntl.h"
 #include "boost/thread.hpp"
 #include "qingzhou_bringup/app.h"
@@ -189,6 +191,7 @@ private:
     int shSrv;//SocketHandler
     int shCli;
 
+
     // std::string recvBuff;//数据接受缓冲区
     // std::string sendBUff;//数据发送缓冲区
     
@@ -199,7 +202,7 @@ private:
     ros::Subscriber ekfPoseSuber;
     ros::Subscriber trafficLightSuber;
     ros::Subscriber pianyiSuber;
-    ros::Subscriber locationInMapSuber;
+    // ros::Subscriber locationInMapSuber;
     ros::Subscriber movebasePoseFeedbackSuber;
     ros::Duration sleepDur;
     ros::ServiceClient visioncontrolclient;
@@ -210,8 +213,10 @@ private:
     ros::Timer updateStateTimer;
     // ros::Timer countCircleTimer;
 
+    geometry_msgs::Pose robotPose;
+
     robotstate robotState;  
-    sockaddr_in addrClient;
+    sockaddr_in addrClient; 
     
     rsm robotStatusMsg;//发送到上位机的机器人状态数据
     rcm robotControlMsg;
@@ -225,6 +230,8 @@ private:
     float roadLinePianyi; //记录当前车道线的偏移量
 
 
+
+
     float _ppstime1;
     float _ppstime2;
     float _ppsspeed1x;
@@ -236,6 +243,9 @@ private:
     ros::Time _tmpStartTime;
     std::vector<double> _countTimeList;
     std::vector<double> _circleTimeList;
+
+    boost::thread *_tfListenThread;
+
     // int _entTime;
 
     void UpdateStateTimerCB();
@@ -243,8 +253,8 @@ private:
 
     void _PrintCurruentLocation();
 
-    
-        
+
+
     std::string _EmumTranslator(ROBOTLOCATION value);
 
 public:
@@ -326,6 +336,8 @@ public:
 
     std::string _EmumTranslator(ROBOTGOALPOINT goal);
     // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
+
+    void ListenRobotPose(geometry_msgs::Pose &robotPose);
 };
 
 #endif
