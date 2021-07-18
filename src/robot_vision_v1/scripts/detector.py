@@ -4,6 +4,7 @@ import cv2
 from pickle import LIST
 import cv2.aruco as aruco
 import numpy as np
+import threading
 # import argparse
 from _02GStreamer import *
 import time
@@ -52,6 +53,7 @@ openColorDetector = 0
 Frame = 1       # 从第1帧开始读取视频
 starttime = 0
 emdtime = 0
+green_flag = 0
 Video = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
 Video.set(1, Frame)
 # 红绿灯识别
@@ -95,6 +97,10 @@ def detector(Img):
             return colortype
     else:
         print('no image')
+
+def turn_to_green() :
+    data.x = 1
+    green_flag = 1
 
 flag = 0
 pianyi_befor = 0
@@ -147,8 +153,6 @@ def color_seperate_1(image):
 def pianyi_detect(img):
     pianyi=0
     pianyi_text=''
-
-
     ##############读取图像#########################
     (img_w, img_h) = img.shape[:2] #获取传入图片的长与宽   w是高 h是宽
     # print(img_h) #640-------这是宽
@@ -229,30 +233,11 @@ def pianyi_detect(img):
                     pianyi_text = 'stright'
                 #print(pianyi)
             # 蓝线
-            else:
-                # #检测红线
-                # cropped_img_1 = color_seperate_1(cropped_img_1)
-                # gray_img = cv2.cvtColor(cropped_img_1, cv2.COLOR_BGR2GRAY)
-                # # gray_img = cv2.GaussianBlur(gray_img, (5, 5), 0, 0, cv2.BORDER_DEFAULT)
-                # ret, img_thresh = cv2.threshold(gray_img, 10, 255, cv2.THRESH_BINARY)
-                # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-                # img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel)
-                # img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
-                # contours, hierarchy = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)    
-                # if len(contours) >0 : #如果红色物体数量大于1，则说明就是在红线上
-                #     contour2 = []
-                #     for c1 in range(len(contours)):
-                #         for c2 in range(len(contours[c1])):
-                #             contour2.append(contours[c1][c2])
-                #     contour2 = np.array(contour2)
-                #     (x2, y2, w2, h2) = cv2.boundingRect(contour2)
-                #     cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
-                #     pianyi = 60 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h #60是凑数
-                #     pianyi_text='right'  
+            else: 
                     #竖直蓝线######
                 # else: #看见一块蓝色并且真的是蓝线
                 cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
-                pianyi = 60-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #60凑数
+                pianyi = 80-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #80凑数,为了让车不开出赛道去
                 pianyi_text='left'
                     # if h <60 and w < 150 : #当只检测到中间最后一点蓝色时，判断为出去
                     #     print('99999')
@@ -275,7 +260,7 @@ def pianyi_detect(img):
                     contour2 = np.array(contour2)
                     (x2, y2, w2, h2) = cv2.boundingRect(contour2)
                     cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
-                    pianyi = 13 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h #60是凑数
+                    pianyi = 13 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h #13是凑数
                     pianyi_text='right'  
                 else: #看见一块蓝色并且真的是蓝线
                     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
@@ -307,7 +292,7 @@ def pianyi_detect(img):
             # res = cv2.drawContours(img, contour1, -1, (0, 0, 255), 1)
             (x2, y2, w2, h2) = cv2.boundingRect(contour2)
             cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
-            pianyi = 40 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h
+            pianyi = 20 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h
             pianyi_text='right'
             #print('右偏移')
             #print(pianyi)
@@ -330,7 +315,7 @@ def pianyi_detect(img):
     # if(abs(pianyi - pianyi_befor) > 30) or pianyi_befor == -pianyi_now  or nothing_point ==1: #去除剧烈跳变和检测到左下角点
     if pianyi_befor == -pianyi_now  or nothing_point ==1: #这一句如果加上防止突变有点危险
         pianyi_now = pianyi_befor       
-        print("*****检测到干扰*******")    
+        # print("*****检测到干扰*******")    
     pianyi_befor = pianyi_now
     # print(pianyi_now) #暂时
     return pianyi_now
@@ -342,7 +327,7 @@ def pianyi_detect(img):
 def handle_app_req(req):
     global controlFlag
     global starttime
-    global endtime
+    global endtime 
     global openColorDetector
     if(req.statue == 1):
         controlFlag = 1
@@ -350,18 +335,16 @@ def handle_app_req(req):
         print("++++++open roadline*******")
     elif(req.statue == 0):
         controlFlag = 0
-        print("++++++close roadline*******")
+        print("++++++reset roadline*******")
     elif(req.statue == 2):
         controlFlag = 2
-        print("++++++close roadline*******")
+        print("++++++close roadline(stop car)*******")
     elif(req.statue == 3):
         print("++++++open color*******")
         openColorDetector = 1
     elif(req.statue == 4):
         openColorDetector = 0
         print("++++++close color*******")
-        
-
     return 0
 
 if __name__ == '__main__':
@@ -401,7 +384,7 @@ if __name__ == '__main__':
                         # time2 = time.time()
                         # print("resize :{}".format(time2-time1))
                         colortype = detector(Img_1)
-                        print(colortype)
+                        # print(colortype) #打印红绿灯的检测最终结果
                     flag_traffic = flag_traffic + 1
                 else:
                     colortype = -1
@@ -415,15 +398,25 @@ if __name__ == '__main__':
                 if colortype == 0 : #红灯
                     # print('666')
                     data.x = 0
+                    timer = threading.Timer(6,turn_to_green)
+                    timer.start()
+                    if green_flag == 1 :
+                        timer.cancel()
+                        green_flag = 0
+
                     # vision.publish(data)
                 elif colortype == 1 : #绿灯1
-                    # print('777')
+                    # print('777_1')
                     data.x = 1
                     # vision.publish(data)
                 elif colortype == 2 : #绿灯2
+                    # print('777_2')
+                    data.x = 1
+                    # vision.publish(data)                
+                elif colortype == 3 : #黄灯
                     # print('888')
                     data.x = 2
-                    # vision.publish(data)                
+                    # vision.publish(data)     
                 else:
                     # print("-999") #没灯
                     data.x = -999
@@ -457,9 +450,9 @@ if __name__ == '__main__':
 
                     # pianyicount = 0
                 elif(controlFlag == 2):
-                    print("****************stop****************")
-                    cmdData.linear.x = 0.8
-                    cmdData.angular.z = -0.5
+                    # print("****************stop****************")
+                    cmdData.linear.x = 1.0
+                    cmdData.angular.z = -0.85   
                     cmdpub.publish(cmdData)
                 # elif(pianyi == 0):
                 #     pianyicount += 1

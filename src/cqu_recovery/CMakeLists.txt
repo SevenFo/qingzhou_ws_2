@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   tf2_ros
   tf
+  nav_msgs
 )
 add_definitions(${EIGEN3_DEFINITIONS})
 

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <include file="$(find qingzhou_nav)/launch/qingzhou_bringup_dwa.launch" />
+    <include file="$(find qingzhou_nav)/launch/qingzhou_move_base_dwa.launch" />
+    <include file="$(find robot_vision)/launch/detector.launch" />
+    <node pkg="qingzhou_bringup" type="TCP_Send_node" name="TCP_Send_node" output = "screen"></node>
+</launch>

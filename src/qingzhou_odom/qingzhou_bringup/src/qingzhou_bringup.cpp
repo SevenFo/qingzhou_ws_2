@@ -107,8 +107,13 @@ void actuator::run()
     recvCarInfoKernel();                              //接收stm32发来的数据
 	pub_9250();                                       //发布imu数据
 		
-	currentBattery.data = batteryVoltage;            
-	pub_battery.publish(currentBattery);             
+	
+  int bit0_z = batteryVoltage & (255);
+  int bit1_x = (unsigned char)((batteryVoltage) >> 8);
+  currentBattery.data = bit0_z + ((float)bit1_x / 100.0f);
+  // std::cout << "battary:" << (unsigned int)batteryVoltage << std::endl;
+  // std::cout << "batteryVoltage: bits0:" << bit0_z << " bits1:" << bit1_x << std::endl;
+  pub_battery.publish(currentBattery);             
 
     #if 1
 	if(encoderLeft > 220 || encoderLeft < -220) encoderLeft = 0;
@@ -133,7 +138,7 @@ void actuator::run()
     if(false)
         calibrate_angularSpeed = 1;
 	if(calibrate_lineSpeed == 1){
-		printf("x=%.2f,y=%.2f,th=%.2f,linearSpeed=%.2f,,detEncode=%.2f,LeftticksPerMeter = %lld,rightticksPerMeter = %lld,batteryVoltage = %.2f\n",x,y,th,linearSpeed,detEncode,LeftticksPerMeter,rightticksPerMeter,batteryVoltage);
+		printf("x=%.2f,y=%.2f,th=%.2f,linearSpeed=%.2f,,detEncode=%.2f,LeftticksPerMeter = %lld,rightticksPerMeter = %lld,batteryVoltage = %d\n",x,y,th,linearSpeed,detEncode,LeftticksPerMeter,rightticksPerMeter,batteryVoltage);
 	}
 		
 	//send command to stm32

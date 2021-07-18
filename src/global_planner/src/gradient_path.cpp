@@ -43,7 +43,7 @@
 namespace global_planner {
 
 GradientPath::GradientPath(PotentialCalculator* p_calc) :
-        Traceback(p_calc), pathStep_(0.5) ,open_debug(true){
+        Traceback(p_calc), pathStep_(0.5) ,open_debug(false){
     gradx_ = grady_ = NULL;
 }
 

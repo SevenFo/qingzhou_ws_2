@@ -96,7 +96,7 @@ void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costm
 void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2D* costmap, std::string frame_id) {
     if (!initialized_) {
 
-        open_debug = true;
+        open_debug = false;
 
         ros::NodeHandle private_nh("~/" + name);
         costmap_ = costmap;

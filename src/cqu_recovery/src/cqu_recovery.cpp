@@ -1,10 +1,5 @@
 #include "cqu_recovery/cqu_recovery.h"
-#include "nav_core/recovery_behavior.h"
-#include "pluginlib/class_list_macros.h"
-#include <geometry_msgs/Twist.h>
-#include "nav_msgs/Path.h"
-#include <tf/tf.h>
-#include <math.h>
+
 PLUGINLIB_EXPORT_CLASS(cqu_recovery_behavior::cqu_recovery, nav_core::RecoveryBehavior)
 
 namespace cqu_recovery_behavior
@@ -36,10 +31,16 @@ namespace cqu_recovery_behavior
             _localCostmapPtr = local_costmap;
 
             _n = ros::NodeHandle(name);//命名空间解析为 /move_base/name/...
-            ROS_INFO("*****************CQURECOVERY SUBSCRIB!**************");
+            ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_init", "cqu_recovery_initialize: node name:" << name);
+
+            _n.param("foot_print", _footlenth, 10);
+
             this->robotCurruentGoalSuber = _n.subscribe<geometry_msgs::PoseStamped>("/move_base/current_goal", 1, &cqu_recovery::RobotCurruentGoalCB, this);
             this->globalPlanSuber = _n.subscribe<nav_msgs::Path>("/move_base/GlobalPlanner/plan",2,&cqu_recovery::GlobalPlanCB,this);
+
+
             isInitialize = true;
+            _debug = true;
         }
         else
         {
@@ -58,10 +59,9 @@ namespace cqu_recovery_behavior
         if(_globalCostmapPtr->getRobotPose(robotPose))
         {
             tf::Quaternion quat;
-            tf::quaternionMsgToTF(robotPose.pose.orientation, quat);
             double robotYaw =  tf::getYaw(robotPose.pose.orientation);
-            double K = std::atan(this->CalculateKValue(robotPose.pose,_robotCurruentGoal));
-            ROS_INFO_STREAM_NAMED("cqu_recovery:","K value:"<<K/3.14159*180<<" robotYaw:"<<robotYaw/3.14159*180);
+            double K = _globalKValue = 0;
+            ROS_INFO_STREAM_NAMED("cqu_recovery:", "K value:" << K / 3.14159 * 180 << " robotYaw:" << robotYaw / 3.14159 * 180);
             if (K >  robotYaw)
             {
                 ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value > robotYaw. Z value = -1.0");
@@ -93,17 +93,33 @@ namespace cqu_recovery_behavior
 
 double cqu_recovery::CalculateKValue(geometry_msgs::Pose startp,geometry_msgs::Pose endp)
 {
-    ROS_INFO_STREAM_NAMED("cqu recovery","startpx:"<<startp.position.x<<" startpy:"<<startp.position.y<<" endpx"<<endp.position.x<<" endpy:"<<endp.position.y);
+    ROS_INFO_STREAM_COND_NAMED(_debug,"cqu recovery","startpx:"<<startp.position.x<<" startpy:"<<startp.position.y<<" endpx"<<endp.position.x<<" endpy:"<<endp.position.y);
     return (endp.position.y - startp.position.y) / (endp.position.x - startp.position.x);
+}
+double cqu_recovery::CalculateKValue(const geometry_msgs::Point startp,const geometry_msgs::Point endp)
+{
+    ROS_INFO_STREAM_COND_NAMED(_debug,"cqu recovery","startpx:"<<startp.x<<" startpy:"<<startp.y<<" endpx"<<endp.x<<" endpy:"<<endp.y);
+    return (endp.y - startp.y) / (endp.x - startp.x);
 }
 
     void cqu_recovery::RobotCurruentGoalCB(const geometry_msgs::PoseStamped::ConstPtr &msg)
     {
-        ROS_INFO_STREAM_NAMED("cqu recovery", "get pose:x:"<<msg.get()->pose.position.x<<" y:"<<msg.get()->pose.position.y);
+        ROS_INFO_STREAM_COND_NAMED(_debug,"cqu recovery", "get pose:x:"<<msg.get()->pose.position.x<<" y:"<<msg.get()->pose.position.y);
         _robotCurruentGoal = msg.get()->pose;
     }
-    void cqu_recovery::GlobalPlanCB(const nav_msgs::Path::ConstPtr &msg)
+    void cqu_recovery::GlobalPlanCB(const nav_msgs::PathConstPtr &msg)
     {
-        //取两个点，计算斜率
+        // //取两个点，计算斜率
+        // if(msg.get()->poses.max_size() < _footlenth+1)
+        //     return;
+        
+        // const auto p1 = msg.get()->poses.at(0).pose.position;
+        // const auto p2 = msg.get()->poses.at(0).pose.position;
+        
+        // ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_globalplancb", "cqu_recovery_globalplancb:Global plan p1x:" <<p1.x<<" p1y:"<<p1.y <<" p2x:"<<p2.x << "p2y:"<<p2.y);
+        
+        // double _globalKValue = this->CalculateKValue(p1,p2);
+
+        // ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_globalplancb", "cqu_recovery_globalplancb: _globalKValue" <<_globalKValue);
     }
 }

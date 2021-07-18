@@ -62,11 +62,13 @@ public:
      int encoderRight;                       //右编码器
      int calibrate_lineSpeed;                //标定线速度
      int calibrate_angularSpeed;             //标定角速度
+     unsigned int batteryVoltage;                   //电池电压
+     
      float ticksPerMeter;                    //一米脉冲数
      float ticksPer2PI;                      //每圈脉冲数
      float linearSpeed;                      //线速度
      float angularSpeed;                     //角速度
-     float batteryVoltage;                   //电池电压
+     
        
      short tempaccelX,tempaccelY,tempaccelZ; //加速度缓存区
      short tempgyroX,tempgyroY,tempgyroZ;    //角速度缓存区

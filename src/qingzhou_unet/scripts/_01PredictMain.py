@@ -82,7 +82,7 @@ def line():
     # 将网络拷贝到deivce中
     net.to(device=device)
     # 加载模型参数
-    net.load_state_dict(torch.load('/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_unet/scripts/0700_dict.pt', map_location='cuda'))
+    net.load_state_dict(torch.load('/home/cquer/ROSApplications/qingzhou_ws_2/src/qingzhou_unet/scripts/0650_retrained_dict.pt', map_location='cuda'))
 
     # 测试模式
     net.eval()
@@ -93,7 +93,7 @@ def line():
         # time2 = time.time()
         # print("get img: {}".format(time2-time1))
         # time1 = time.time()
-        Img = cv2.resize(Img, (640, 480))
+        # Img = cv2.resize(Img, (640, 480))
         # time2 = time.time()
         # print("resize img: {}".format(time2-time1))
         # time1 = time.time()
@@ -114,13 +114,8 @@ def line():
         # print("warpedimg to img_tensor: {}".format(time2-time1))
         # time1 = time.time()
         # 转为tensor
-        # img_tensor = torch.from_numpy(WarpedImg)
-        # plt.imshow(np.array(img_tensor).transpose(1, 2, 0))
-        # plt.show()
         # 将tensor拷贝到device中，只用cpu就是拷贝到cpu中，用cuda就是拷贝到cuda中。
         img_tensor = img_tensor.to(device=device, dtype=torch.float32)
-        # img_tensor  = cv2.resize(img_tensor , (640, 480))
-        # print(img_tensor.shape)
         img_tensor = img_tensor.reshape(1, 3, 128, 128)
         # time2 = time.time()
         # print("pred before: {}".format(time2-time1))

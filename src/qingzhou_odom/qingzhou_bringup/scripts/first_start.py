@@ -29,9 +29,9 @@ def srv_callback(req):
     rospy.timer.sleep(rospy.Duration(1))
     print("Robot localized and trying to clear costmap")
     clear_map_srv_Client.call()
-    print("Done! This node will shutdown within five seconds")
+    print("Done! wati 0.5s for clear costmap")
     # rospy.signal_shutdown("over")
-    rospy.timer.sleep(rospy.Duration(5))
+    rospy.timer.sleep(rospy.Duration(0.5))
     # return True
     return []
 

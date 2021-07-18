@@ -6,16 +6,16 @@ from numpy.core.fromnumeric import shape
 
 Red = np.array([115, 86, 232.])
 #Yellow = np.array([10, 100, 140.])
-Green = np.array([135, 200, 17.]) #之前是这个，电很足的时候的绿色
+Green1 = np.array([135, 200, 17.]) #之前是这个，电很足的时候的绿色
 # yellow = np.array([236, 250, 28.]) #之前是这个
 # Green = np.array([64, 145, 61.]) #试验，找到个中间绿色
 # Red = np.array([38, 28, 230.])
 Yellow = np.array([11, 81, 178.])
-# Green = np.array([35, 128, 10.]) #没什么电时候的绿色
+Green2 = np.array([35, 128, 10.]) #没什么电时候的绿色
 # Colors = (Red, Yellow, Green)
-Colors = (Red, Green,Yellow)
+Colors = (Red, Green1,Green2,Yellow)
 # ColorsName = ('Red', 'Yellow', 'Green')
-ColorsName = ('Red', 'Green1','Green2')
+ColorsName = ('Red', 'Green1','Green2','Yellow')
 DistThreshold =  5000   # 颜色距离阈值
 #DistThreshold =  2000   # 颜色距离阈值
 

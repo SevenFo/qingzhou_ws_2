@@ -4,9 +4,15 @@
 #include <nav_core/recovery_behavior.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <boost/thread.hpp>
+#include <nav_msgs/Path.h>
 #include <dynamic_reconfigure/Reconfigure.h>
 #include <move_base_msgs/MoveBaseGoal.h>
-
+#include "nav_core/recovery_behavior.h"
+#include "pluginlib/class_list_macros.h"
+#include <geometry_msgs/Twist.h>
+#include "nav_msgs/Path.h"
+#include <tf/tf.h>
+#include <math.h>
 namespace cqu_recovery_behavior
 {
     class cqu_recovery : public nav_core::RecoveryBehavior
@@ -49,12 +55,19 @@ namespace cqu_recovery_behavior
             delete _localCostmapPtr;
         }
     private:
+
+        int _footlenth;//计算全局路径斜率时的步长
+        double _globalKValue;
+
+
         ros::Subscriber robotCurruentGoalSuber;
         ros::Subscriber globalPlanSuber;
         geometry_msgs::Pose _robotCurruentGoal;
         void RobotCurruentGoalCB(const geometry_msgs::PoseStamped::ConstPtr &msg);
-        void GlobalPlanCB(const nav_msgs::Path::ConstPtr &msg);
+        void GlobalPlanCB(const nav_msgs::PathConstPtr &msg);
         double CalculateKValue(geometry_msgs::Pose startp, geometry_msgs::Pose endp);
+        double CalculateKValue(const geometry_msgs::Point startp, const geometry_msgs::Point endp);
+        bool _debug;
     };
 
 } // namespace cqu_recovery_behavious

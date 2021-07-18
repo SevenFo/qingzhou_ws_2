@@ -9,7 +9,7 @@ local_costmap:
 
   # Rate parameters
 
-  update_frequency:  7.0 #  
+  update_frequency:  10.0 #  
   publish_frequency: 5.0 # default 0.0
 
   # Map management parameters
@@ -66,13 +66,7 @@ local_costmap:
     # Possible values are "Overwrite" (0), "Maximum" (1) and "Nothing" (99). 
     # "Overwrite" simply overwrites the data below, i.e. they are not used. 
     # "Maximum" is what you want most of the times. 
-    #   It takes the maximum of what is supplied in the obstacle_layer or the incoming data. 
-    # "Nothing" doesn't change the incoming data at all. 
-    # Note that this highly influences how the costmap behaves, 
-    # depending on your setting of track_unkown_space.
-
-  # Inflation layer
-  # Inflation is the process of propagating cost values out from occupied cells that decrease with distance. For this purpose, we define 5 specific symbols for costmap values as they relate to a robot.
+    #   It takes the maximum o**********
 
   # "Lethal" cost means that there is an actual (workspace) obstacle in a cell. So if the robot's center were in that cell, the robot would obviously be in collision.
   # "Inscribed" cost means that a cell is less than the robot's inscribed radius away from an actual obstacle. So the robot is certainly in collision with some obstacle if the robot center is in a cell that is at or above the inscribed cost.
@@ -83,8 +77,8 @@ local_costmap:
   # All other costs are assigned a value between "Freespace" and "Possibly circumscribed" depending on their distance from a "Lethal" cell and the decay function provided by the user.
   # The rationale behind these definitions is that we leave it up to planner implementations to care or not about the exact footprint, yet give them enough information that they can incur the cost of tracing out the footprint only in situations where the orientation actually matters.
   inflation_layer: 
-    inflation_radius: 0.5 #default 0.55 # The radius in meters to which the map inflates obstacle cost values.
-    cost_scaling_factor: 10.0 #default 10
+    inflation_radius: 0.2 #default 0.55 # The radius in meters to which the map inflates obstacle cost values.
+    cost_scaling_factor: 1.0 #default 10
     # A scaling factor to apply to cost values during inflation.
     # The cost function is computed as follows for all cells in the costmap further than the 
     # inscribed radius distance and closer than the inflation radius distance away from 
