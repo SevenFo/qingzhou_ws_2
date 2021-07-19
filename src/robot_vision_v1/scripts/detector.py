@@ -26,7 +26,7 @@ def gstreamer_pipeline(
 		display_height=480,
 		# display_width=1920, #原来的
 		# display_height=1080,
-		framerate=40,
+		framerate=35,
 		flip_method=0,
 ):
 	return (
@@ -97,12 +97,6 @@ def detector(Img):
             return colortype
     else:
         print('no image')
-
-# def turn_to_green() :
-#     global greenflag
-#     greenflag = 1
-#     print('turn')
-    # print(greenflag)
 
 flag = 0
 pianyi_befor = 0
@@ -331,7 +325,6 @@ def handle_app_req(req):
     global starttime
     global endtime 
     global openColorDetector
-    global redtime
     if(req.statue == 1):
         controlFlag = 1
         starttime = time.time()

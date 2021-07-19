@@ -49,7 +49,9 @@ int main(int argc, char **  argv)
                         tcpsender->UpdateRobotGoalList((point3d*)&robotControlMsg.goalList);
   
                         ROS_INFO_NAMED("TCP_Sender_Node","seted goal");
+
                         break;
+                        
                     }
                     case 0x03://改变目标 location 并且执行goal
                     {
@@ -58,6 +60,7 @@ int main(int argc, char **  argv)
                         ROS_INFO_NAMED("TCP_Sender_Node","updated!");
                         tcpsender->UpdateRobotLocation(robotControlMsg.location);
                         tcpsender->ExecGoal();
+                        break;
                     }
                     case 0x04:
                     {

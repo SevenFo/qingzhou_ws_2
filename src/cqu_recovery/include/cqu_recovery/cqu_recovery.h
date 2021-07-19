@@ -72,6 +72,7 @@ namespace cqu_recovery_behavior
         double CalculateKValue(const geometry_msgs::Point startp, const geometry_msgs::Point endp);
         double NormalizeDegree(double degree, double minDegree=-3.14/2, double maxDegree=3.14/2);
         double KvalueToDegree(double Kvalue);
+        double Degree360(double degree);
         bool _debug;
     };
 

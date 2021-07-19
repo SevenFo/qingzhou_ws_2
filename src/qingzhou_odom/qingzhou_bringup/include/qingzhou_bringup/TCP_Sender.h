@@ -16,6 +16,7 @@
 #include "geometry_msgs/Point.h"
 #include "move_base_msgs/MoveBaseGoal.h"
 #include "move_base_msgs/MoveBaseAction.h"
+#include "actionlib_msgs/GoalStatus.h"
 #include <actionlib/client/simple_action_client.h>
 #include "tf/tf.h"
 #include "tf2_ros/transform_listener.h" 
@@ -198,17 +199,20 @@ private:
     ros::NodeHandle nh;
     ros::Subscriber bettarySuber;
     ros::Subscriber speedSuber;//suber to /cmd_vel
-    ros::Subscriber locationSuber;
-    ros::Subscriber ekfPoseSuber;
+    // ros::Subscriber locationSuber;
+    // ros::Subscriber ekfPoseSuber;
     ros::Subscriber trafficLightSuber;
     ros::Subscriber pianyiSuber;
     // ros::Subscriber locationInMapSuber;
-    ros::Subscriber movebasePoseFeedbackSuber;
+    // ros::Subscriber movebasePoseFeedbackSuber;
     ros::Duration sleepDur;
     ros::ServiceClient visioncontrolclient;
     ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
     ros::ServiceClient clearCostmapClient;//清除costmap
-    ros::Publisher currentGoalPuber;
+    ros::ServiceClient dynamicparamsclient;
+    ros::Publisher _currentGoalPuber;
+    ros::Publisher _goalStatusPuber;
+    ros::Publisher _locationInMapPuber;
 
     ros::Timer updateStateTimer;
     // ros::Timer countCircleTimer;
@@ -241,6 +245,8 @@ private:
 
     ros::Time _startTime;
     ros::Time _tmpStartTime;
+    ros::Time _redStartTime;
+
     std::vector<double> _countTimeList;
     std::vector<double> _circleTimeList;
 

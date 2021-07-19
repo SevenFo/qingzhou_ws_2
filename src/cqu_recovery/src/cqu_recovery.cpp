@@ -59,8 +59,8 @@ namespace cqu_recovery_behavior
         if(_globalCostmapPtr->getRobotPose(robotPose))
         {
             tf::Quaternion quat;
-            double robotYaw = tf::getYaw(robotPose.pose.orientation);
-            double K = _planDegree;
+            double robotYaw = Degree360(tf::getYaw(robotPose.pose.orientation));
+            double K = Degree360(_planDegree);
             ROS_INFO_STREAM_NAMED("cqu_recovery:", "K value:" << K / 3.14159 * 180 << " robotYaw:" << robotYaw / 3.14159 * 180);
             if (K >  robotYaw)
             {
@@ -138,5 +138,14 @@ namespace cqu_recovery_behavior
         {
             return maxDegree + (fmodf64(degree-minDegree, maxDegree - minDegree));
         }
+    }
+    double cqu_recovery::Degree360(double degree)
+    {
+        if(degree<0)
+        {
+            return degree + 3.14159 * 2;
+        }
+        else
+            return degree;
     }
 }
