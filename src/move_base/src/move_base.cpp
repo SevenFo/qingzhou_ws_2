@@ -62,7 +62,8 @@ namespace move_base {
 
     ros::NodeHandle private_nh("~");
     ros::NodeHandle nh;
-
+    open_debug = false;
+    ROS_INFO_COND_NAMED(open_debug, "move base debug", "move_base: *******ITS MY MOVEBASE***********");
     recovery_trigger_ = PLANNING_R;
 
     //get some parameters that will be global to the move base node
@@ -88,6 +89,7 @@ namespace move_base {
     planner_plan_ = new std::vector<geometry_msgs::PoseStamped>();
     latest_plan_ = new std::vector<geometry_msgs::PoseStamped>();
     controller_plan_ = new std::vector<geometry_msgs::PoseStamped>();
+    lastvalid_plan_ = new std::vector<geometry_msgs::PoseStamped>();
 
     //set up the planner's thread
     planner_thread_ = new boost::thread(boost::bind(&MoveBase::planThread, this));
@@ -384,7 +386,7 @@ namespace move_base {
     if(!planner_->makePlan(start, req.goal, global_plan) || global_plan.empty()){
       ROS_DEBUG_NAMED("move_base","Failed to find a plan to exact goal of (%.2f, %.2f), searching for a feasible goal within tolerance",
           req.goal.pose.position.x, req.goal.pose.position.y);
-
+      ROS_INFO_COND_NAMED(open_debug, "move base debug", "move_base: First make plan in plan service");
       //search outwards for a feasible goal within the specified tolerance
       geometry_msgs::PoseStamped p;
       p = req.goal;
@@ -419,7 +421,7 @@ namespace move_base {
                       //(the reachable goal should have been added by the global planner)
                       global_plan.push_back(req.goal);
                     }
-
+                    ROS_INFO_COND_NAMED(open_debug, "move base debug", "move_base: Second make plan in plan service");
                     found_legal = true;
                     ROS_DEBUG_NAMED("move_base", "Found a plan to point (%.2f, %.2f)", p.pose.position.x, p.pose.position.y);
                     break;
@@ -590,18 +592,49 @@ namespace move_base {
       //run planner
       planner_plan_->clear();
       bool gotPlan = n.ok() && makePlan(temp_goal, *planner_plan_);
+      
+      if(gotPlan||has_valid_plan_){
+        // if(!gotPlan)
+        // {
+        //   copy(lastvalid_plan_->begin(),lastvalid_plan_->end(),planner_plan_->begin());
+        // }
+        // ROS_INFO_STREAM_COND(open_debug, "lastvalid_plan_ size:" << lastvalid_plan_->size());
 
-      if(gotPlan){
-        ROS_DEBUG_NAMED("move_base_plan_thread","Got Plan with %zu points!", planner_plan_->size());
+        // ROS_DEBUG_NAMED("move_base_plan_thread", "Got Plan with %zu points!", planner_plan_->size());
         //pointer swap the plans under mutex (the controller will pull from latest_plan_)
         std::vector<geometry_msgs::PoseStamped>* temp_plan = planner_plan_;
 
         lock.lock();
-        planner_plan_ = latest_plan_;
-        latest_plan_ = temp_plan;
-        last_valid_plan_ = ros::Time::now();
-        planning_retries_ = 0;
-        new_global_plan_ = true;
+        if(gotPlan)
+        {
+          planner_plan_ = latest_plan_;
+          latest_plan_ = temp_plan;
+          lastvalid_plan_->resize(latest_plan_->size());
+          copy(latest_plan_->begin(), latest_plan_->end(), lastvalid_plan_->begin());
+          // lastvalid_plan_ = latest_plan_;
+          has_valid_plan_ = true;
+          last_valid_plan_ = ros::Time::now();
+          planning_retries_ = 0;
+          new_global_plan_ = true;
+          // ROS_INFO_STREAM_COND(open_debug, "got plan ;lastvalide plan size:" << lastvalid_plan_->size());
+          // ROS_INFO_COND_NAMED("open_debug", "my move base", "Got plan lastvalid plan = latest plan");
+        }
+        else
+        {
+
+            latest_plan_->resize(lastvalid_plan_->size());
+            copy(lastvalid_plan_->begin(), lastvalid_plan_->end(), latest_plan_->begin());
+            // ROS_INFO_STREAM_COND(open_debug, "latest_plan_ size is not 0 keep lastvalid_plan_ update" );
+            // ROS_INFO_STREAM_COND(open_debug, "can not got plan, copy lastvalid_plan_ to latest_plan_ ;lastvalide plan size:" << lastvalid_plan_->size()<<" latest_plan_ size is:"<<latest_plan_->size());
+            last_valid_plan_ = ros::Time::now();
+            planning_retries_ = 0; 
+            // planning_retries_++;
+
+            new_global_plan_ = true;
+          
+
+          // ROS_INFO_COND_NAMED("open_debug", "my move base", "Cant get plan latest_plan_ = lastvalid_plan_");
+        }
 
         ROS_DEBUG_NAMED("move_base_plan_thread","Generated a plan from the base_global_planner");
 
@@ -645,6 +678,7 @@ namespace move_base {
           timer = n.createTimer(sleep_time, &MoveBase::wakePlanner, this);
         }
       }
+      //  ROS_INFO_STREAM_COND(open_debug, "while end :lastvalid_plan_ size:" << lastvalid_plan_->size());
     }
   }
 
@@ -843,8 +877,10 @@ namespace move_base {
       std::vector<geometry_msgs::PoseStamped>* temp_plan = controller_plan_;
 
       boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_);
+      ROS_INFO_STREAM_COND(open_debug, "IN CONTROLLER: latest_plan_ size is:" << latest_plan_->size() << "  lastvalid_plan_ size is:" << lastvalid_plan_->size());
       controller_plan_ = latest_plan_;
       latest_plan_ = temp_plan;
+      
       lock.unlock();
       ROS_DEBUG_NAMED("move_base","pointers swapped!");
 

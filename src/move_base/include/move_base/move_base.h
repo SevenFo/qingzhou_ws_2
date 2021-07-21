@@ -214,6 +214,7 @@ namespace move_base {
       std::vector<geometry_msgs::PoseStamped>* planner_plan_;
       std::vector<geometry_msgs::PoseStamped>* latest_plan_;
       std::vector<geometry_msgs::PoseStamped>* controller_plan_;
+      std::vector<geometry_msgs::PoseStamped>* lastvalid_plan_;
 
       //set up the planner's thread
       bool runPlanner_;
@@ -232,6 +233,9 @@ namespace move_base {
       move_base::MoveBaseConfig default_config_;
       bool setup_, p_freq_change_, c_freq_change_;
       bool new_global_plan_;
+
+      bool open_debug = true;
+      bool has_valid_plan_ = false;
   };
 };
 #endif

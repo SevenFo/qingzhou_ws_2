@@ -11,11 +11,12 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     nh.param("speed1_z",_ppsspeed1z,-0.8f);
     nh.param("speed2_x",_ppsspeed2x,0.5f);
     nh.param("speed2_z",_ppsspeed2z,0.8f);
-    
+
+    _redStartTime = ros::Time(0);
     //订阅
     bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",5,&TCP_Sender::SubBettaryInfoCB,this);//电池电量
     speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel",50,&TCP_Sender::SubSpeedCB,this);//速度
-    trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",5,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
+    trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
     pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubLineCB,this);
     //service client
     visioncontrolclient = nh.serviceClient<qingzhou_bringup::app>("/vision_control");
@@ -189,8 +190,10 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
         this->ExecGoal();
     }
     //检测到绿灯 或者 停车时间超过6s
-    else if((this->robot_local_state.trafficLightColor == green&& (!this->haveDetectedGreenTfl)) || (ros::Time::now()-_redStartTime).toSec() > 6)//如果是绿灯，不管车在哪里都直接前往下一个目标点
+    else if(((this->robot_local_state.trafficLightColor == green) ||(_redStartTime.toSec()-ros::Time::now().toSec()) > 6)&& (!this->haveDetectedGreenTfl) ) //如果是绿灯，不管车在哪里都直接前往下一个目标点
     {
+        std::cout <<"now time:"<<ros::Time::now()<< "start time:"<<_redStartTime<<"  " << (ros::Time::now().toSec() - _redStartTime.toSec()) << std::endl;
+        _redStartTime = ros::Time(0);
         //频繁发布绿灯的目标点会怎么样？ 會開不起來
         ROS_INFO_STREAM("det green");
         this->haveDetectedGreenTfl = true;
@@ -816,5 +819,17 @@ void TCP_Sender::ListenRobotPose(geometry_msgs::Pose &robotPose)
             // std::cout << "tferr:" << err<<std::endl;
         }
         rate.sleep();
+    }
+}
+
+void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client)
+{
+    boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_)
+    while(ros.ok())
+    {
+        while (this->robot_local_state.location != unloadtoroadline)
+        {
+            _watchRLCond.wait(lock);
+        }
     }
 }

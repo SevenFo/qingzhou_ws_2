@@ -64,13 +64,29 @@ namespace cqu_recovery_behavior
             ROS_INFO_STREAM_NAMED("cqu_recovery:", "K value:" << K / 3.14159 * 180 << " robotYaw:" << robotYaw / 3.14159 * 180);
             if (K >  robotYaw)
             {
-                ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value > robotYaw. Z value = -1.0");
-                tmpControl.angular.z = +0.5;//can set to be param //倒车好像是相反的
+                if(abs(K-robotYaw)>3.1415926)
+                {
+                    ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value > robotYaw. Z value = +1.0");
+                    tmpControl.angular.z = -0.5;
+                }
+                else
+                {
+                    ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value > robotYaw. Z value = -1.0");
+                    tmpControl.angular.z = +0.5;//can set to be param //倒车好像是相反的
+                }
             }
             else{
                 //
-                ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value < robotYaw. Z value = 1.0");
-                tmpControl.angular.z = -0.5;//can set to be param
+                if(abs(K-robotYaw)>3.1415926)
+                {
+                    ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value > robotYaw. Z value = +1.0");
+                    tmpControl.angular.z = +0.5;
+                }
+                else
+                {
+                    ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value > robotYaw. Z value = -1.0");
+                    tmpControl.angular.z = -0.5;//can set to be param //倒车好像是相反的
+                }
             }
         }
         else

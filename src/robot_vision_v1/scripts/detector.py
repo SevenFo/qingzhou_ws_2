@@ -453,9 +453,10 @@ if __name__ == '__main__':
                     # pianyicount = 0
                 elif(controlFlag == 2):
                     # print("****************stop****************")
-                    cmdData.linear.x = 1.0
-                    cmdData.angular.z = -0.85   
+                    cmdData.linear.x = 1.2
+                    cmdData.angular.z = -1.3 
                     cmdpub.publish(cmdData)
+                    print("x = 1.2 z = -1.0")
                 # elif(pianyi == 0):
                 #     pianyicount += 1
                 #     if(pianyicount == 5):

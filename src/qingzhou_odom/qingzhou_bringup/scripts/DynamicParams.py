@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+## 添加在车道线入口不停止的参数
 import rospy
 import numpy
 from dynamic_reconfigure import client

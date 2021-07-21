@@ -251,6 +251,9 @@ private:
     std::vector<double> _circleTimeList;
 
     boost::thread *_tfListenThread;
+    boost::thread *_watchRLStart;
+
+    boost::condition_variable_any _watchRLCond;
 
     // int _entTime;
 
@@ -259,7 +262,8 @@ private:
 
     void _PrintCurruentLocation();
 
-
+    //监听机器人是否到达RL起始点的线程🔓
+    boost::recursive_mutex watchRLMutex;
 
     std::string _EmumTranslator(ROBOTLOCATION value);
 
@@ -313,6 +317,11 @@ public:
     bool SwitchVisionControl();//开启视觉控制
     bool SwitchTflControl();
 
+    /**
+     * @description: 
+     * @param {rcm} &data
+     * @return {*}
+     */
     void UpdateLocation(rcm &data);//0x0?
     void ExecUserGoalAndUpdateLocation(rcm & data);//0x03
 
@@ -320,30 +329,89 @@ public:
 
     //*************new today**************
 
+    /**
+     * @description: 
+     * @param {*}
+     * @return {*}
+     */
     void ExecGoal();
 
+    /**
+     * @description: 
+     * @param {ROBOTLOCATION} value
+     * @return {*}
+     */
     void UpdateRobotLocation(ROBOTLOCATION value);
 
+    /**
+     * @description: 
+     * @param {ROBOTGOALPOINT} goal
+     * @return {*}
+     */
     void UpdateRobotCurruentGoal(ROBOTGOALPOINT goal);
 
+    /**
+     * @description: 
+     * @param {*}
+     * @return {*}
+     */
     void RunGoal_v2();
 
+    /**
+     * @description: 
+     * @param {*}
+     * @return {*}
+     */
     bool OpenTflDet();
 
+    /**
+     * @description: 
+     * @param {*}
+     * @return {*}
+     */
     bool StopTflDet();
 
+    /**
+     * @description: 
+     * @param {*}
+     * @return {*}
+     */
     bool OpenRLDet();
 
+    /**
+     * @description: 
+     * @param {*}
+     * @return {*}
+     */
     bool StopRLDet();
 
     bool ClearCostmapAndWait();
 
+    /**
+     * @description: 
+     * @param {point3d} *goalList
+     * @return {*}
+     */
     void UpdateRobotGoalList(point3d *goalList);
 
+
+    /**
+     * @description: 
+     * @param {ROBOTGOALPOINT} goal
+     * @return {*}
+     */
     std::string _EmumTranslator(ROBOTGOALPOINT goal);
     // bool RequestVisionControl(qingzhou_bringup::app::Request &req, qingzhou_bringup::app::Response &res);
 
+    /**
+     * @brief 监听并且更新机器人的位置
+     * @param robotPose 用来存储更新的位置
+     * @return void
+     * */
     void ListenRobotPose(geometry_msgs::Pose &robotPose);
+
+    //监视机器人是否到达车道线起点并取消goal让视觉接管控制
+    void WatchRLStartAndCancleGoal(MoveBaseActionClient* client);
 };
 
 #endif
