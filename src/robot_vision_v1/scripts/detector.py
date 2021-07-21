@@ -26,7 +26,7 @@ def gstreamer_pipeline(
 		display_height=480,
 		# display_width=1920, #原来的
 		# display_height=1080,
-		framerate=35,
+		framerate=28,
 		flip_method=0,
 ):
 	return (
@@ -183,7 +183,7 @@ def pianyi_detect(img):
         (x, y, w, h) = cv2.boundingRect(contour1) #用一个最小的矩形，把找到的所有的轮廓包起来，返回轮值x，y是矩阵左上点的坐标，w，h是矩阵的宽和高
         # print(h)
         # ####################1.1 同时检测到蓝白线和蓝线，删选出蓝白线，计算位置########################
-        if w>img_h/2  and con_num >1 : #如果整体轮廓的宽度大于二分之图片的宽度，则说明同时检测到了蓝白线和蓝线
+        if w>img_h/3  and con_num >1 : #如果整体轮廓的宽度大于二分之图片的宽度，则说明同时检测到了蓝白线和蓝线
             mask=np.zeros_like(gray_img) #
             cv2.rectangle(mask, (x, y), (x + 250, y + h-3), (255, 255, 255), cv2.FILLED) #将mask的部分进行白色填充，参数为填充区域的左上角顶将gray_img转化为全是0的矩阵并赋值给mask即全黑点和右下角顶点
             # cv2.imshow('mask',mask) #进行填充后的mask的图像
@@ -213,7 +213,7 @@ def pianyi_detect(img):
                 #print(pianyi)
 
             #########################1.2 只检测到一条线，需要判断是蓝白线还是蓝线##############
-        elif w<img_h/2  :
+        elif w<img_h/3  :
             # 如果是蓝白线
             if con_num>1: #轮廓数量大于1，就是有好几段蓝色
                 cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 3) #黄框----------只检测到蓝白线并用黄框画出
@@ -232,6 +232,19 @@ def pianyi_detect(img):
             else: 
                     #竖直蓝线######
                 # else: #看见一块蓝色并且真的是蓝线
+                # if h < 50 :
+                #     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 3) #黄框----------------检测到了最后一小段的蓝白线的蓝色
+                #     pianyi = ((x + w / 2) - (img_h / 2)) * FOV_w / img_h
+                #     if pianyi > 0:
+                #         #print('右偏')
+                #         pianyi_text='right'
+                #     elif pianyi<0:
+                #         #print('左偏')
+                #         pianyi_text='left'
+                #     else:
+                #         # print('左偏')
+                #         pianyi_text = 'stright'
+                # else :
                 cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
                 pianyi = 80-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #80凑数,为了让车不开出赛道去
                 pianyi_text='left'
@@ -349,9 +362,9 @@ if __name__ == '__main__':
     data = Vector3()
     pianyibefore = 0
     pianyicount = 0
-    pianyisamelist = [0,0,0,0]#大概需要4/40=0.1s判断车车有没有出去，可能太短了
+    pianyisamelist = [0,0,0,0,0]#大概需要4/40=0.1s判断车车有没有出去，可能太短了
     controlFlag = 10 #原来是10
-    openColorDetector = 1 #原来是0
+    openColorDetector = 0 #原来是0
     global flag_traffic
     flag_traffic = 0
     redtime = 0
@@ -435,6 +448,10 @@ if __name__ == '__main__':
                     pianyi = pianyi_detect(Img_2)
                 else:
                     pianyi = 0
+                # print("pianyi_before:{} pianyi:{}".format(pianyibefore,pianyi))
+                # if(abs(pianyi - pianyibefore) >15):
+                #     pianyi = (pianyibefore + pianyi)/2
+                #     print("over jumped")
                 # time2 = time.time()
                 # print("pianyi :{}".format(time2-time1))
                 # print(pianyi)   
@@ -444,17 +461,17 @@ if __name__ == '__main__':
                 # if(abs(pianyi - pianyibefore) >= abs(40)):
                 #     print("****************out****************")
                 if(controlFlag == 1 or False): #原来是false
-                    # print(pianyi)
+                    print(pianyi)
                     # print("vision controling...")
                     cmdData.linear.x = 1.2
-                    cmdData.angular.z = (pianyi*1.6+ 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837
+                    cmdData.angular.z = (pianyi*1.8 + 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837   1.6
                     cmdpub.publish(cmdData)
 
                     # pianyicount = 0
                 elif(controlFlag == 2):
                     # print("****************stop****************")
-                    cmdData.linear.x = 1.2
-                    cmdData.angular.z = -1.3 
+                    cmdData.linear.x = 1.2  #1.2
+                    cmdData.angular.z = -1.3   #-1.3
                     cmdpub.publish(cmdData)
                     print("x = 1.2 z = -1.0")
                 # elif(pianyi == 0):
@@ -482,6 +499,7 @@ if __name__ == '__main__':
                         pianyi = 999
                     # print(time.time()-starttime)
                 # print(pianyisamelist)
+
                 if(controlFlag == 1):
                     data.y = pianyi
                     vision.publish(data)

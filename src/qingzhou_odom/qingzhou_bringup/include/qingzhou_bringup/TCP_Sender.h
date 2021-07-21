@@ -16,6 +16,7 @@
 #include "geometry_msgs/Point.h"
 #include "move_base_msgs/MoveBaseGoal.h"
 #include "move_base_msgs/MoveBaseAction.h"
+#include "move_base_msgs/MoveBaseActionGoal.h"
 #include "actionlib_msgs/GoalStatus.h"
 #include <actionlib/client/simple_action_client.h>
 #include "tf/tf.h"
@@ -30,8 +31,7 @@
 
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseActionClient;
-
-
+// typedef actionlib::SimpleActionClietn<move_base_msgs::MoveBa
 
 
 enum TRAFFICLIGHT{red = 0,green = 1,yellow = 2};
@@ -210,6 +210,7 @@ private:
     ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
     ros::ServiceClient clearCostmapClient;//清除costmap
     ros::ServiceClient dynamicparamsclient;
+    ros::ServiceServer appServiceServer;
     ros::Publisher _currentGoalPuber;
     ros::Publisher _goalStatusPuber;
     ros::Publisher _locationInMapPuber;
@@ -233,8 +234,7 @@ private:
     float pianyibefore;
     float roadLinePianyi; //记录当前车道线的偏移量
 
-
-
+    geometry_msgs::Pose _roadlinestartPose;
 
     float _ppstime1;
     float _ppstime2;
@@ -242,6 +242,8 @@ private:
     float _ppsspeed1z;
     float _ppsspeed2x;
     float _ppsspeed2z;
+
+    bool _open_debug = false;
 
     ros::Time _startTime;
     ros::Time _tmpStartTime;
@@ -293,6 +295,7 @@ public:
     void movebasePoseFeedbackCB(const move_base_msgs::MoveBaseActionFeedbackConstPtr &msg);
     void GoalDoneCB(const actionlib::SimpleClientGoalState &state, const move_base_msgs::MoveBaseResultConstPtr &result);
     void GoalActiveCB();//目标点激活的回调函数
+    bool AppServiceCB(qingzhou_bringup::app::Request &req,qingzhou_bringup::app::Response &res);
 
     //********************************
 
@@ -411,7 +414,7 @@ public:
     void ListenRobotPose(geometry_msgs::Pose &robotPose);
 
     //监视机器人是否到达车道线起点并取消goal让视觉接管控制
-    void WatchRLStartAndCancleGoal(MoveBaseActionClient* client);
+    void WatchRLStartAndCancleGoal(MoveBaseActionClient *client, ros::Publisher *cmdpuber);
 };
 
 #endif

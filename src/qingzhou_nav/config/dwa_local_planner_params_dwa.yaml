@@ -24,7 +24,8 @@ DWAPlannerROS:
 
 # Goal Tolerance Parameters
   yaw_goal_tolerance: 0.8  #  当实现其目标时，控制器在偏航/旋转方面的公差，单位为弧度。(default: 0.05) 0.8
-  xy_goal_tolerance: 0.3  #   当实现一个目标时，控制器在x和y距离上的公差，以米为单位。(default: 0.10)  0.3
+  xy_goal_tolerance: 0.3  #   当实现一个目标时，控制器在x和y
+  距离上的公差，以米为单位。(default: 0.10)  0.3
   latch_xy_goal_tolerance: false   #如果锁定目标公差且机器人到达目标xy位置，机器人将简单地旋转到位，即使它在目标公差的范围内结束。
 
 # Forward Simulation Parameters

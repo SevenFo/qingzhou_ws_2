@@ -23,13 +23,15 @@ class DynamicParamsClient():
         rospy.init_node("DynamicParamsClient")
         rospy.loginfo("wait for service")
         #self.log("unloadtorlstart","wait for service")
-        rospy.wait_for_service("/move_base/DWAPlannerROS/set_parameters",timeout=10)
+        rospy.wait_for_service("/move_base/DWAPlannerROS/set_parameters",timeout=100)
+        rospy.wait_for_service("/TCP_Sender/app",timeout = 100)
  
         self.debug = True
         self.DWAClient = client.Client("/move_base/DWAPlannerROS",0.2,self.DWAParamsChangedCallback)
         self.goalStatusSuber = rospy.Subscriber("/TCP_Sender/GoalStatus",GoalStatus,self.GoalStatusCallback,queue_size=1)
         self.poseSuber = rospy.Subscriber("/TCP_Sender/PoseInMap",Pose,self.PoseCallback,queue_size=2)
         self.cmdPuber = rospy.Publisher("/cmd_vel",Twist,queue_size=3)
+        self.tcpsenderAppClient = rospy.ServiceProxy("/TCP_Sender/app",app)
         self.DWAConfig = None
         self.pose = Pose()
         self.goalStatus = GoalStatus()
@@ -85,6 +87,7 @@ class DynamicParamsClient():
                 # self.log("DWAParamCallback","min_vel_x set to:".format(self.DWAConfig["min_vel_x"]))
                 # self.DWACondition[0] = False
                 self.DWACondition[1] = True
+                self.tcpsenderAppClient(1)#call service to weak thread
             elif(self.DWACondition[1] and self.DWACondition[0] and self.pose.position.y > -4.5):
                 self.DWAClient.update_configuration({"max_vel_x":self.DWAConfig["max_vel_x"]})
                 self.log("unloadtorlstart","set max_vel_x:{}".format(self.DWAConfig["max_vel_x"]))

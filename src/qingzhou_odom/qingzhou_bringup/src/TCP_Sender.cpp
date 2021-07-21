@@ -23,6 +23,8 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     dynamicparamsclient = nh.serviceClient<qingzhou_bringup::app>("/DynamicParamsClient");
     clearCostmapFirstlyClient = nh.serviceClient<std_srvs::Empty>("/clear_cost_map");
     clearCostmapClient = nh.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
+    //service server
+    appServiceServer = nh.advertiseService("/TCP_Sender/app",&TCP_Sender::AppServiceCB,this);
     //Publisher
     cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",50);
     _goalStatusPuber = nh.advertise<actionlib_msgs::GoalStatus>("/TCP_Sender/GoalStatus", 1);
@@ -37,6 +39,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 
     //Thread
     this->_tfListenThread = new boost::thread(boost::bind(&TCP_Sender::ListenRobotPose, this,boost::ref(this->robotPose))); //开启监听pose的线程
+    // this->_watchRLStart = new boost::thread(boost::bind(&TCP_Sender::WatchRLStartAndCancleGoal, this, this->moveBaseActionClientPtr,&this->cmdvelPuber));
 
     robot_local_state = rls();
 
@@ -44,7 +47,13 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     haveDetectedGreenTfl = false;
     this->_circleTimeList.clear();
 
+    //*********init point position************
+    this->_roadlinestartPose.position.x = 0.2725;
+    this->_roadlinestartPose.position.y = -4.338;
+
+
     sleepDur = ros::Duration(1);
+    this->_open_debug = true;
 }
 
 TCP_Sender::~TCP_Sender()
@@ -156,6 +165,16 @@ bool TCP_Sender::RetriveMsg(void *buff,size_t buffSize)//从sicket取回信息
 }
 
 
+bool TCP_Sender::AppServiceCB(qingzhou_bringup::app::Request &req,qingzhou_bringup::app::Response &res)
+{
+    if(req.statue == 1)
+    {
+        ROS_INFO_STREAM_COND(_open_debug, "weak _watchRLCond");
+        this->_watchRLCond.notify_one();
+        return true;
+    }
+    return false;
+}
 
 //一直唤醒
 void TCP_Sender::SubBettaryInfoCB(const std_msgs::Float32::ConstPtr &msg)
@@ -284,10 +303,17 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
         this->ClearCostmapAndWait();
         this->robot_local_state.goalState = aborted;
     }
-
+    else
+    {
+        
+    }
+    // else if(state == actionlib::SimpleClientGoalState::PREEMPTED)
+    // {
+    //     this->robot_local_state.goalState = active;//可能需要修改
+    // }
 }
 void TCP_Sender::GoalActiveCB()
-{   
+{    
     std::cout<<"goal active"<<std::endl;
 }
 
@@ -547,16 +573,27 @@ void TCP_Sender::ExecGoal()
     //************
 
     move_base_msgs::MoveBaseGoal tmp;
+    // move_base_msgs::MoveBaseActionGoal tmpwgoalid;
+    // tmpwgoalid.header.frame_id = "map";
+    // tmpwgoalid.header.stamp = ros::Time::now();
+    // tmpwgoalid.goal_id.id = this->_EmumTranslator(robot_local_state.curruentGoal);
+    // tmpwgoalid.goal_id.stamp = ros::Time::now();
     tmp.target_pose.header.frame_id = "map";
     tmp.target_pose.pose.position.x = robot_local_state.goalList[robot_local_state.curruentGoal].x;
     tmp.target_pose.pose.position.y = robot_local_state.goalList[robot_local_state.curruentGoal].y;
     tmp.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z);
+    // tmpwgoalid.goal = tmp;
     ROS_INFO_STREAM_NAMED("TCP_Sender", "goal setting: "<<this->_EmumTranslator(robot_local_state.curruentGoal)<<" and detail:"<<"x:"<<tmp.target_pose.pose.position.x<<" y:"<<tmp.target_pose.pose.position.y<<" z:"<<robot_local_state.goalList[robot_local_state.curruentGoal].z<<"qx:"<<tmp.target_pose.pose.orientation.x<<" qy:"<<tmp.target_pose.pose.orientation.y<<" qz"<<tmp.target_pose.pose.orientation.z<<" qw"<<tmp.target_pose.pose.orientation.w);
 
     tmp.target_pose.header.stamp = ros::Time::now();
     this->robot_local_state.goalState = active;
+    // this->moveBaseActionClientPtr->sendGoal(tmp, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2), boost::bind(&TCP_Sender::GoalActiveCB, this));
     this->moveBaseActionClientPtr->sendGoal(tmp, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2), boost::bind(&TCP_Sender::GoalActiveCB, this));
+    // this->moveBaseActionClientPtr->sendGoal()
     ROS_INFO_NAMED("TCP_Sender", "send goal point success");
+
+
+    // this->moveBaseActionClientPtr->cancelAllGoals();
 }
 
 void TCP_Sender::UpdateRobotLocation(ROBOTLOCATION value)
@@ -822,14 +859,30 @@ void TCP_Sender::ListenRobotPose(geometry_msgs::Pose &robotPose)
     }
 }
 
-void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client)
+void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Publisher* cmdpuber)
 {
-    boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_)
-    while(ros.ok())
+    ros::Rate rate(20);
+    geometry_msgs::Twist speed;
+    speed.linear.x = 0.2;
+    speed.angular.z = -0.4;
+    boost::unique_lock<boost::recursive_mutex> lock(watchRLMutex);
+    while (ros::ok())
     {
+        //当机器人的目标点没有位于unloadtoroadline的时候就让该线程休眠，进入unloadtoroadline的时候weak才有用
         while (this->robot_local_state.location != unloadtoroadline)
         {
             _watchRLCond.wait(lock);
         }
+        // ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: abs(rx - rlx) = "<<abs(robotPose.position.x - 0.46)<<" ry:"<<robotPose.position.y);
+        if(abs(robotPose.position.x - 0.46)<0.05 && robotPose.position.y > -4.73)
+        {
+            client->cancelAllGoals();
+            ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: cancel all goal and open RL det");
+            
+            this->UpdateRobotLocation(roadlinestart);
+            this->robot_local_state.goalState = reach;
+            cmdpuber->publish(speed);
+        }
     }
+    rate.sleep();
 }
