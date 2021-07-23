@@ -216,6 +216,7 @@ private:
     ros::Publisher _locationInMapPuber;
 
     ros::Timer updateStateTimer;
+    ros::Timer delayOneSecondTimer;
     // ros::Timer countCircleTimer;
 
     geometry_msgs::Pose robotPose;
@@ -225,7 +226,7 @@ private:
     
     rsm robotStatusMsg;//发送到上位机的机器人状态数据
     rcm robotControlMsg;
-    rls robot_local_state;
+
     bool haveDetectedRedTfl;
     bool haveDetectedGreenTfl;
     bool haveDetectRL;   //是否检测到车道线 用于在进行过程中更改目标点
@@ -254,6 +255,7 @@ private:
 
     boost::thread *_tfListenThread;
     boost::thread *_watchRLStart;
+    // boost::thread *_sendMsgThread;
 
     boost::condition_variable_any _watchRLCond;
 
@@ -275,6 +277,7 @@ public:
     void _RunSpeedPlan();
     MoveBaseActionClient * moveBaseActionClientPtr;
     ros::Publisher cmdvelPuber;
+    rls robot_local_state;
     // move_base_msgs::MoveBaseGoal startPoint;
     // move_base_msgs::MoveBaseGoal getGoodsPoint;
     // move_base_msgs::MoveBaseGoal throwGoodsPoint;

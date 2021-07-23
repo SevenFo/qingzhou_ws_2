@@ -78,11 +78,11 @@ class DynamicParamsClient():
                 # 提高速度
                 self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
                 # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-                self.DWAClient.update_configuration({"min_vel_x":0.8,"min_vel_theta":0.1,"max_vel_theta":1.3})
-                self.log("unloadtorlstart","set min_vel_x 0.8; min_vel_theta 0.1； max_vel_theta: 1.3")
+                self.DWAClient.update_configuration({"min_vel_x":0.8,"min_vel_theta":0.1,"max_vel_theta":1.5})
+                self.log("unloadtorlstart","set min_vel_x 0.8; min_vel_theta 0.1； max_vel_theta: 1.5")
                 self.DWACondition[0] = True
             elif(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x > -1.2):
-                self.DWAClient.update_configuration({"min_vel_x":self.DWAConfig["min_vel_x"],"max_vel_theta":self.DWAConfig["max_vel_theta"],"min_vel_theta":self.DWAConfig["min_vel_theta"],"max_vel_x":0.7})
+                self.DWAClient.update_configuration({"min_vel_x":self.DWAConfig["min_vel_x"],"max_vel_theta":1.3,"min_vel_theta":self.DWAConfig["min_vel_theta"],"max_vel_x":0.5})
                 self.log("unloadtorlstart","set min_vel_x {}; min_vel_theta {}； max_vel_theta: {}; max_vel_x:0.7".format(self.DWAConfig["min_vel_x"],self.DWAConfig["max_vel_theta"],self.DWAConfig["min_vel_theta"]))
                 # self.log("DWAParamCallback","min_vel_x set to:".format(self.DWAConfig["min_vel_x"]))
                 # self.DWACondition[0] = False

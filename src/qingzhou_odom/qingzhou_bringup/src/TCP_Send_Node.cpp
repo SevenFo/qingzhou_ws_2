@@ -3,28 +3,41 @@
 TCP_Sender *tcpsender;
 bool acitonSetedGoal = false;//stop 0 start 1 getGood 2 throwGood 
 rcm robotControlMsg = rcm();
-void TimerCB(const ros::TimerEvent &e)
+// void TimerCB(const ros::TimerEvent &e)
+// {
+//     tcpsender->SendRobotStatusInfo();
+// }
+void SendMsg(TCP_Sender *tcpsender)
 {
-    tcpsender->SendRobotStatusInfo();
+    ros::Rate rate(20);
+    while (ros::ok())
+    {
+        tcpsender->SendRobotStatusInfo();
+        rate.sleep();
+    }
 }
 
 int main(int argc, char **  argv)
 {
     ros::init(argc,argv,"TCP_Send_node");
     ros::NodeHandle nh("~");
-    ros::Timer timer = nh.createTimer(ros::Duration(0.05),TimerCB);
+    // ros::Timer timer = nh.createTimer(ros::Duration(0.05),TimerCB);
     ros::Rate rate(25);
     ros::Duration dsleep(5);
+    ros::Publisher cmdpub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
     tcpsender = new TCP_Sender(nh);
+    bool haveNewMsg = false;
 
     if(tcpsender->SocketInit()) //暂时注释
     // if(true)
     {
         tcpsender->WaitServices();
+        boost::thread sendMsgThread(boost::bind(&SendMsg,tcpsender));
+        // boost::thread retriveMsgThread(boost::bind(&RetriveRobotMsg, &robotControlMsg, tcpsender,&haveNewMsg));
         tcpsender->ClearCostmapFirstly();
-        timer.start(); //暂时注释
-
-        while(ros::ok())
+        // timer.start(); //暂时注释
+        
+        while (ros::ok())
         {
             ros::spinOnce();
 
@@ -102,6 +115,11 @@ int main(int argc, char **  argv)
                         tcpsender->UpdateRobotLocation(robotControlMsg.location);
                         break;
                     }
+                    case 0x99://pause
+                    {
+                        tcpsender->moveBaseActionClientPtr->cancelAllGoals();
+                        cmdpub.publish(geometry_msgs::Twist());
+                    }
                     default:
                     {
                         break;
@@ -114,6 +132,7 @@ int main(int argc, char **  argv)
             if(acitonSetedGoal)
                 tcpsender->RunGoal_v2();
             rate.sleep();
+            //std::cout<<"check new msg"<<std::endl;
 
         }
         std::cout<<"quit TCP SEND NODE"<<std::endl;

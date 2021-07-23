@@ -52,7 +52,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     this->_roadlinestartPose.position.y = -4.338;
 
 
-    sleepDur = ros::Duration(1);
+    // sleepDur = ros::Duration(1);
     this->_open_debug = true;
 }
 
@@ -169,9 +169,9 @@ bool TCP_Sender::AppServiceCB(qingzhou_bringup::app::Request &req,qingzhou_bring
 {
     if(req.statue == 1)
     {
-        ROS_INFO_STREAM_COND(_open_debug, "weak _watchRLCond");
-        this->_watchRLCond.notify_one();
-        return true;
+        // ROS_INFO_STREAM_COND(_open_debug, "weak _watchRLCond");
+        // this->_watchRLCond.notify_one();
+        // return true;
     }
     return false;
 }
@@ -209,7 +209,7 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
         this->ExecGoal();
     }
     //检测到绿灯 或者 停车时间超过6s
-    else if(((this->robot_local_state.trafficLightColor == green) ||(_redStartTime.toSec()-ros::Time::now().toSec()) > 6)&& (!this->haveDetectedGreenTfl) ) //如果是绿灯，不管车在哪里都直接前往下一个目标点
+    else if((this->robot_local_state.trafficLightColor == green) && (!this->haveDetectedGreenTfl) ) //如果是绿灯，不管车在哪里都直接前往下一个目标点
     {
         std::cout <<"now time:"<<ros::Time::now()<< "start time:"<<_redStartTime<<"  " << (ros::Time::now().toSec() - _redStartTime.toSec()) << std::endl;
         _redStartTime = ros::Time(0);
@@ -234,17 +234,13 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
 
     int pianyi = (msg.get()->y);
     // std::cout << "painyi: " << pianyi << std::endl;
-    if (int(pianyi) && this->robot_local_state.openRoadLineDet) //pianyi >0 才进入 因为和红绿灯共同使用一个话题，默认情况下painyi=0
+    if (int(pianyi) && this->robot_local_state.openRoadLineDet && this->robot_local_state.location == roadline) //pianyi >0 才进入 因为和红绿灯共同使用一个话题，默认情况下painyi=0
     {
 
         if(pianyi >998 ){//偏移跳变大于30判断退出赛道 不太好用 废弃了
             this->UpdateRobotLocation(roadlineout);
             if (this->StopRLDet())
             {
-                std::cout << "*********sleep*************" << std::endl;
-                ros::Duration(1.0).sleep();
-                std::cout << "*********set reach*************" << std::endl;
-                this->robot_local_state.goalState = reach;
             }
             else{
                 ROS_INFO_NAMED("TCP_Sender", "Oh no! robot cant stop!!");
@@ -298,10 +294,14 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
         default:{ROS_WARN("cant get positonstate");break;}
         }
     }
-    else if(state == actionlib::SimpleClientGoalState::ABORTED || state == actionlib::SimpleClientGoalState::PREEMPTED)
+    else if(state == actionlib::SimpleClientGoalState::ABORTED )
     {
         this->ClearCostmapAndWait();
         this->robot_local_state.goalState = aborted;
+    }
+    else if(state == actionlib::SimpleClientGoalState::PREEMPTED)
+    {
+
     }
     else
     {
@@ -544,14 +544,19 @@ bool TCP_Sender::StopRLDet()
         ROS_INFO("stop RL control success");
         this->robot_local_state.openRoadLineDet = false;
         //等待一段时间后 返回导航控制状态
-        ROS_INFO_NAMED("TCP_Sender_stopRLDet","SLEEP 1s (make robot turn right)");
-        ros::Duration(1).sleep();
-        qingzhou_bringup::app req;
-        req.request.statue = 0;
-        if (visioncontrolclient.call(req))
-        {
-            //say something
-        }
+        ROS_INFO_NAMED("TCP_Sender_stopRLDet","wait 1s (make robot turn right)");
+        // ros::Duration(1).sleep();
+        this->delayOneSecondTimer = nh.createTimer(ros::Duration(1.0), [=](auto t)
+                                                   {
+                                                       qingzhou_bringup::app req;
+                                                       req.request.statue = 0;
+                                                       if (visioncontrolclient.call(req))
+                                                       {
+                                                           //say something
+                                                       }
+                                                       this->robot_local_state.goalState = reach;
+                                                   },true,true);
+
         return true;
     }
     else
@@ -631,9 +636,16 @@ void TCP_Sender::RunGoal_v2()
                 std::cout << " | " << i << " part:" << this->_countTimeList.at(i) << std::endl;
             this->_countTimeList.clear();
             //前往getGood point
-            this->UpdateRobotLocation(starttoload);
-            this->UpdateRobotCurruentGoal(goal_load);
-            this->ExecGoal();
+            if(this->robot_local_state.autoGoalControl)//只有开启autogoalcontrol之后才可以一到卸货区就发布去roalline的goal，否则要我们手动发布
+            {
+                this->UpdateRobotLocation(starttoload);
+                this->UpdateRobotCurruentGoal(goal_load);
+                this->ExecGoal();
+            }
+            else{
+                ROS_INFO_NAMED("TCP_Sender", "robot have reached unload, pls pub next goal");
+            }
+
             break;
         }
         case load:
@@ -759,7 +771,7 @@ bool TCP_Sender::ClearCostmapAndWait()
         ROS_INFO_NAMED("TCP_Sender", "clear costmap success!");
         //在转角的时候路径规划没有考虑障碍物？
         ROS_INFO_NAMED("TCP_Sender", "Sleep 1.0s wating costmap)");
-        sleepDur = ros::Duration(1.0);
+        sleepDur = ros::Duration(1.3);
         sleepDur.sleep();
         ROS_INFO_NAMED("TCP_Sender", "weak up");
         return true;
@@ -859,30 +871,30 @@ void TCP_Sender::ListenRobotPose(geometry_msgs::Pose &robotPose)
     }
 }
 
-void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Publisher* cmdpuber)
-{
-    ros::Rate rate(20);
-    geometry_msgs::Twist speed;
-    speed.linear.x = 0.2;
-    speed.angular.z = -0.4;
-    boost::unique_lock<boost::recursive_mutex> lock(watchRLMutex);
-    while (ros::ok())
-    {
-        //当机器人的目标点没有位于unloadtoroadline的时候就让该线程休眠，进入unloadtoroadline的时候weak才有用
-        while (this->robot_local_state.location != unloadtoroadline)
-        {
-            _watchRLCond.wait(lock);
-        }
-        // ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: abs(rx - rlx) = "<<abs(robotPose.position.x - 0.46)<<" ry:"<<robotPose.position.y);
-        if(abs(robotPose.position.x - 0.46)<0.05 && robotPose.position.y > -4.73)
-        {
-            client->cancelAllGoals();
-            ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: cancel all goal and open RL det");
+// void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Publisher* cmdpuber)
+// {
+//     ros::Rate rate(20);
+//     geometry_msgs::Twist speed;
+//     speed.linear.x = 0.2;
+//     speed.angular.z = -0.4;
+//     boost::unique_lock<boost::recursive_mutex> lock(watchRLMutex);
+//     while (ros::ok())
+//     {
+//         //当机器人的目标点没有位于unloadtoroadline的时候就让该线程休眠，进入unloadtoroadline的时候weak才有用
+//         while (this->robot_local_state.location != unloadtoroadline)
+//         {
+//             _watchRLCond.wait(lock);
+//         }
+//         // ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: abs(rx - rlx) = "<<abs(robotPose.position.x - 0.46)<<" ry:"<<robotPose.position.y);
+//         if(abs(robotPose.position.x - 0.46)<0.05 && robotPose.position.y > -4.73)
+//         {
+//             client->cancelAllGoals();
+//             ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: cancel all goal and open RL det");
             
-            this->UpdateRobotLocation(roadlinestart);
-            this->robot_local_state.goalState = reach;
-            cmdpuber->publish(speed);
-        }
-    }
-    rate.sleep();
-}
+//             this->UpdateRobotLocation(roadlinestart);
+//             this->robot_local_state.goalState = reach;
+//             cmdpuber->publish(speed);
+//         }
+//     }
+//     rate.sleep();
+// }

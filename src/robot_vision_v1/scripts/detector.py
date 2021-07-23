@@ -52,6 +52,7 @@ controlFlag = 0
 openColorDetector = 0
 Frame = 1       # 从第1帧开始读取视频
 starttime = 0
+startT = 0
 emdtime = 0
 greenflag = 0
 Video = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
@@ -232,25 +233,25 @@ def pianyi_detect(img):
             else: 
                     #竖直蓝线######
                 # else: #看见一块蓝色并且真的是蓝线
-                # if h < 50 :
-                #     cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 3) #黄框----------------检测到了最后一小段的蓝白线的蓝色
-                #     pianyi = ((x + w / 2) - (img_h / 2)) * FOV_w / img_h
-                #     if pianyi > 0:
-                #         #print('右偏')
-                #         pianyi_text='right'
-                #     elif pianyi<0:
-                #         #print('左偏')
-                #         pianyi_text='left'
-                #     else:
-                #         # print('左偏')
-                #         pianyi_text = 'stright'
-                # else :
-                cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
-                pianyi = 80-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #80凑数,为了让车不开出赛道去
-                pianyi_text='left'
-                    # if h <60 and w < 150 : #当只检测到中间最后一点蓝色时，判断为出去
-                    #     print('99999')
-                    #     return 999
+                if h < 50 :
+                    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 3) #黄框----------------检测到了最后一小段的蓝白线的蓝色
+                    pianyi = ((x + w / 2) - (img_h / 2)) * FOV_w / img_h
+                    if pianyi > 0:
+                        #print('右偏')
+                        pianyi_text='right'
+                    elif pianyi<0:
+                        #print('左偏')
+                        pianyi_text='left'
+                    else:
+                        # print('左偏')
+                        pianyi_text = 'stright'
+                else :
+                    cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
+                    pianyi = 80-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #80凑数,为了让车不开出赛道去
+                    pianyi_text='left'
+                        # if h <60 and w < 150 : #当只检测到中间最后一点蓝色时，判断为出去
+                        #     print('99999')
+                        #     return 999
         elif con_num == 1: #横向蓝线
             #检测红线
                 cropped_img_1 = color_seperate_1(cropped_img_1)
@@ -315,10 +316,10 @@ def pianyi_detect(img):
 
     # print("second {}".format(pianyi_now))   
     if pianyi_text == 'right' :
-        pianyi_now = 0 - pianyi_now-7 #这个数要试
+        pianyi_now = 0 - pianyi_now-10 #这个数要试
         # print("third {}".format(pianyi_now))   
     elif  pianyi_text == 'left' :
-        pianyi_now =  pianyi_now
+        pianyi_now =  pianyi_now+5 #这个数要试
         # print("third {}".format(pianyi_now))   
     # print(nothing_point) #打印出有没有左下角点的干扰
     # if(abs(pianyi - pianyi_befor) > 30) or pianyi_befor == -pianyi_now  or nothing_point ==1: #去除剧烈跳变和检测到左下角点
@@ -336,6 +337,7 @@ def pianyi_detect(img):
 def handle_app_req(req):
     global controlFlag
     global starttime
+    global startT
     global endtime 
     global openColorDetector
     if(req.statue == 1):
@@ -347,6 +349,7 @@ def handle_app_req(req):
         print("++++++reset roadline*******")
     elif(req.statue == 2):
         controlFlag = 2
+        startT = time.time()
         print("++++++close roadline(stop car)*******")
     elif(req.statue == 3):
         print("++++++open color*******")
@@ -366,8 +369,10 @@ if __name__ == '__main__':
     controlFlag = 10 #原来是10
     openColorDetector = 0 #原来是0
     global flag_traffic
+    global startT
     flag_traffic = 0
     redtime = 0
+    acc = -0.8
     # iscontrolsub = rospy.Subscriber("/is_version_cont",Float32,iscontrolsubcb,1)
     s = rospy.Service('/vision_control', app, handle_app_req)
     cmdData = Twist()
@@ -461,7 +466,7 @@ if __name__ == '__main__':
                 # if(abs(pianyi - pianyibefore) >= abs(40)):
                 #     print("****************out****************")
                 if(controlFlag == 1 or False): #原来是false
-                    print(pianyi)
+                    # print(pianyi)
                     # print("vision controling...")
                     cmdData.linear.x = 1.2
                     cmdData.angular.z = (pianyi*1.8 + 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837   1.6
@@ -470,10 +475,12 @@ if __name__ == '__main__':
                     # pianyicount = 0
                 elif(controlFlag == 2):
                     # print("****************stop****************")
-                    cmdData.linear.x = 1.2  #1.2
+                    cmdData.linear.x = 1.2+acc*(time.time()-startT)  #1.2
+                    print("now speed:{}".format(cmdData.linear.x))
                     cmdData.angular.z = -1.3   #-1.3
                     cmdpub.publish(cmdData)
-                    print("x = 1.2 z = -1.0")
+                    # print("x = 1.2 z = -1.0")
+                    # controlFlag = 0
                 # elif(pianyi == 0):
                 #     pianyicount += 1
                 #     if(pianyicount == 5):
