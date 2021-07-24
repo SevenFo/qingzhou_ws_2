@@ -592,8 +592,10 @@ namespace move_base {
       //run planner
       planner_plan_->clear();
       bool gotPlan = n.ok() && makePlan(temp_goal, *planner_plan_);
-      
-      if(gotPlan||has_valid_plan_){
+      /*
+      情况1 ： 
+      */
+      if(gotPlan||(has_valid_plan_&&lastvalid_plan_->size() >0)){
         // if(!gotPlan)
         // {
         //   copy(lastvalid_plan_->begin(),lastvalid_plan_->end(),planner_plan_->begin());

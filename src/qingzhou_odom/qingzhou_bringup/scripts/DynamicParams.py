@@ -40,6 +40,7 @@ class DynamicParamsClient():
         self.openUnloadToRLstart = False
         self.openLoadToUnload = False
         self.DWACondition = [False,False]
+        self.openStartToLoad = False
         self.yaw = None
         self.srv = rospy.Service("/DynamicParamsClient",app,self.srvCallback)
         rospy.loginfo("set up dpc")
@@ -54,6 +55,11 @@ class DynamicParamsClient():
             self.openUnloadToRLstart = True
         if(req.statue == 2):
             self.openLoadToUnload = True
+        if(req.statue == 3):
+            self.DWACondition[0] = False
+            self.DWACondition[1] = False
+            self.log("unloadtorlstart","open start to load")
+            self.openStartToLoad = True
         return 0
 
     def PoseCallback(self,pose):
@@ -82,18 +88,33 @@ class DynamicParamsClient():
         #     self.DWAMinVelXChanged = True
         # pass
     def loadtounload(self):
-        if(not self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x<-1.8):#减速带前减速
+        if(not self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x<-1.3):#减速带前减速
             self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
             # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
             self.DWAClient.update_configuration({"max_vel_x":0.5})
             self.log("unloadtorlstart","set max_vel_x 0.8")
             self.DWACondition[0] = True
-        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y >-6.61): #恢复配置
+        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y >-6.8): #恢复配置
             self.DWAClient.update_configuration({"max_vel_x":self.DWAConfig["max_vel_x"]})
             self.log("unloadtorlstart","reset max_vel_x:{}".format(self.DWAConfig["max_vel_x"]))
             self.DWAConfig[0] = False
             self.DWAConfig[1] = False
             self.openLoadToUnload = False
+
+    def starttoload(self):
+        if(not self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x>1.88):#减速带前减速
+            self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
+            # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
+            self.DWAClient.update_configuration({"max_vel_x":0.6})
+            self.log("unloadtorlstart","set max_vel_x 0.6")
+            self.DWACondition[0] = True
+        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y <-3.1): #恢复配置
+            self.DWAClient.update_configuration({"max_vel_x":self.DWAConfig["max_vel_x"]})
+            self.log("unloadtorlstart","reset max_vel_x:{}".format(self.DWAConfig["max_vel_x"]))
+            self.DWAConfig[0] = False
+            self.DWAConfig[1] = False
+            self.openStartToLoad = False
+
 
 
     def unloadtorlstart(self):
@@ -101,17 +122,17 @@ class DynamicParamsClient():
             # 提高速度
             self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
             # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-            self.DWAClient.update_configuration({"min_vel_x":0.8,"min_vel_theta":0.1,"max_vel_theta":1.5})
-            self.log("unloadtorlstart","set min_vel_x 0.8; min_vel_theta 0.1； max_vel_theta: 1.5")
+            self.DWAClient.update_configuration({"min_vel_x":1.0,"min_vel_theta":0.1,"max_vel_theta":1.5})
+            self.log("unloadtorlstart","set min_vel_x 1.0; min_vel_theta 0.1； max_vel_theta: 1.5")
             self.DWACondition[0] = True
-        elif(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x > -1.3):
+        elif(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x > -0.2):
             self.DWAClient.update_configuration({"min_vel_x":self.DWAConfig["min_vel_x"],"max_vel_theta":1.3,"min_vel_theta":self.DWAConfig["min_vel_theta"],"max_vel_x":0.5})
             self.log("unloadtorlstart","set min_vel_x {}; min_vel_theta {}； max_vel_theta: {}; max_vel_x:0.5".format(self.DWAConfig["min_vel_x"],self.DWAConfig["min_vel_theta"],1.3))
             # self.log("DWAParamCallback","min_vel_x set to:".format(self.DWAConfig["min_vel_x"]))
             # self.DWACondition[0] = False
             self.DWACondition[1] = True
-            # self.tcpsenderAppClient(1)#call service to weak thread
-        elif(self.DWACondition[1] and self.DWACondition[0] and self.pose.position.y > -4.5):
+            self.tcpsenderAppClient(1)#call service to weak thread
+        elif(self.DWACondition[1] and self.DWACondition[0] and self.pose.position.y > -4.16):
             self.DWAClient.update_configuration({"max_vel_x":self.DWAConfig["max_vel_x"],"max_vel_theta":self.DWAConfig["max_vel_theta"],"min_vel_x":self.DWAConfig["min_vel_x"]})
             self.log("unloadtorlstart","reset max_vel_x:{},max_vel_theta:{},min_vel_x:{}".format(self.DWAConfig["max_vel_x"],self.DWAConfig["max_vel_theta"],self.DWAConfig["min_vel_x"]))
             self.DWACondition[1] = False
@@ -136,6 +157,8 @@ while(not rospy.is_shutdown()):
         dc.unloadtorlstart()
     if(dc.openLoadToUnload):
         dc.loadtounload()
+    if(dc.openStartToLoad):
+        dc.starttoload()
 
     rospy.sleep(r)
     

@@ -304,8 +304,8 @@ def pianyi_detect(img):
             #print('右偏移')
             #print(pianyi)
 
-    # cv2.imshow('final_img', img) #车道线全图
-    # cv2.waitKey(1)
+    #cv2.imshow('final_img', img) #车道线全图
+    #cv2.waitKey(1)
     # # 返回偏移量（cm）和偏移方向（左偏或者右偏）
     global pianyi_befor
     pianyi_now = abs(pianyi)
@@ -362,7 +362,7 @@ if __name__ == '__main__':
     data = Vector3()
     pianyibefore = 0
     pianyicount = 0
-    pianyisamelist = [0,0,0,0,0]#大概需要4/40=0.1s判断车车有没有出去，可能太短了
+    pianyisamelist = [0,0,0,0,0,0,0]#大概需要4/40=0.1s判断车车有没有出去，可能太短了
     controlFlag = 10 #原来是10
     openColorDetector = 0 #原来是0
     global flag_traffic
@@ -468,8 +468,8 @@ if __name__ == '__main__':
                 if(controlFlag == 1 or False): #原来是false
                     # print(pianyi)
                     # print("vision controling...")
-                    cmdData.linear.x = 1.2
-                    cmdData.angular.z = (pianyi*1.8 + 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837   1.6
+                    cmdData.linear.x = 1.0
+                    cmdData.angular.z = (pianyi*1.6 + 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837   1.6
                     cmdpub.publish(cmdData)
 
                     # pianyicount = 0
@@ -500,7 +500,7 @@ if __name__ == '__main__':
                     else:#列表最后一个进来
                         pianyisamelist[index] = pianyi
                 if(len(set(pianyisamelist)) == 1):
-                    if((time.time()-starttime) > 4.5):
+                    if((time.time()-starttime) > 3.5):
                     ##4.5s前不考虑车会退出赛道 大概需要5s多  可以加一个判断如果超出赛道一定时间就判断退出
                     # print("****************out****************") #暂时
                         pianyi = 999

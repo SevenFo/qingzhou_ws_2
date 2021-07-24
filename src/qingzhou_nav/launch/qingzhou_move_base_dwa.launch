@@ -4,7 +4,7 @@
 
   <include file="$(find qingzhou_nav)/launch/ydlidar.launch" />
 
-  <node name="map_server" pkg="map_server" type="map_server" args="$(find qingzhou_nav)/maps/test_map_7.13_edited.yaml" output="screen">
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find qingzhou_nav)/maps/victory_map.yaml" output="screen">
   <param name="frame_id" value="map" />
   </node>
 

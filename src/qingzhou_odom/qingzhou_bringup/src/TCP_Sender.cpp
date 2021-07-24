@@ -39,7 +39,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 
     //Thread
     this->_tfListenThread = new boost::thread(boost::bind(&TCP_Sender::ListenRobotPose, this,boost::ref(this->robotPose))); //开启监听pose的线程
-    // this->_watchRLStart = new boost::thread(boost::bind(&TCP_Sender::WatchRLStartAndCancleGoal, this, this->moveBaseActionClientPtr,&this->cmdvelPuber));
+    this->_watchRLStart = new boost::thread(boost::bind(&TCP_Sender::WatchRLStartAndCancleGoal, this, this->moveBaseActionClientPtr,&this->cmdvelPuber));
 
     robot_local_state = rls();
 
@@ -169,8 +169,8 @@ bool TCP_Sender::AppServiceCB(qingzhou_bringup::app::Request &req,qingzhou_bring
 {
     if(req.statue == 1)
     {
-        // ROS_INFO_STREAM_COND(_open_debug, "weak _watchRLCond");
-        // this->_watchRLCond.notify_one();
+        ROS_INFO_STREAM_COND(_open_debug, "weak _watchRLCond");
+        this->_watchRLCond.notify_one();
         // return true;
         return true;
     }
@@ -201,7 +201,7 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
     if ((this->robot_local_state.trafficLightColor == red || this->robot_local_state.trafficLightColor == yellow) && (!this->haveDetectedRedTfl))
     {
         ROS_INFO_STREAM("det red");
-        _redStartTime = ros::Time::now();//计时6秒
+
         this->haveDetectedRedTfl = true;//不要频繁发布目标点
         haveDetectedGreenTfl = false;
         this->UpdateRobotLocation(loadingtotfl);
@@ -655,6 +655,11 @@ void TCP_Sender::RunGoal_v2()
                 ROS_INFO_NAMED("TCP_Sender", "robot have reached unload, pls pub next goal");
             }
 
+            qingzhou_bringup::app req;
+            req.request.statue = 3;
+            this->dynamicparamsclient.call(req);
+            ROS_INFO_NAMED("TCP_Sender", "DYNAMIC PARAPMS OPEN： start   to load");
+
             break;
         }
         case load:
@@ -686,6 +691,7 @@ void TCP_Sender::RunGoal_v2()
             //todo
             //如果到达停止线说明现在一定是红灯，没有别的情况会这样了
             ROS_INFO_NAMED("TCP_Sender", "robot have reached tfl，waiting green...");
+            _redStartTime = ros::Time::now(); //计时6秒
             break;
         }
         case unload:
@@ -884,30 +890,30 @@ void TCP_Sender::ListenRobotPose(geometry_msgs::Pose &robotPose)
     }
 }
 
-// void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Publisher* cmdpuber)
-// {
-//     ros::Rate rate(20);
-//     geometry_msgs::Twist speed;
-//     speed.linear.x = 0.2;
-//     speed.angular.z = -0.4;
-//     boost::unique_lock<boost::recursive_mutex> lock(watchRLMutex);
-//     while (ros::ok())
-//     {
-//         //当机器人的目标点没有位于unloadtoroadline的时候就让该线程休眠，进入unloadtoroadline的时候weak才有用
-//         while (this->robot_local_state.location != unloadtoroadline)
-//         {
-//             _watchRLCond.wait(lock);
-//         }
-//         // ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: abs(rx - rlx) = "<<abs(robotPose.position.x - 0.46)<<" ry:"<<robotPose.position.y);
-//         if(abs(robotPose.position.x - 0.46)<0.05 && robotPose.position.y > -4.73)
-//         {
-//             client->cancelAllGoals();
-//             ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: cancel all goal and open RL det");
+void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Publisher* cmdpuber)
+{
+    ros::Rate rate(20);
+    geometry_msgs::Twist speed;
+    speed.linear.x = 0.2;
+    speed.angular.z = 0.0;
+    boost::unique_lock<boost::recursive_mutex> lock(watchRLMutex);
+    while (ros::ok())
+    {
+        //当机器人的目标点没有位于unloadtoroadline的时候就让该线程休眠，进入unloadtoroadline的时候weak才有用
+        while (this->robot_local_state.location != unloadtoroadline)
+        {
+            _watchRLCond.wait(lock);
+        }
+        // ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: abs(rx - rlx) = "<<abs(robotPose.position.x - 0.46)<<" ry:"<<robotPose.position.y);
+        if(abs(robotPose.position.x - 1.08)<0.1 && robotPose.position.y > -4.19)
+        {
+            client->cancelAllGoals();
+            ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: cancel all goal and open RL det");
             
-//             this->UpdateRobotLocation(roadlinestart);
-//             this->robot_local_state.goalState = reach;
-//             cmdpuber->publish(speed);
-//         }
-//     }
-//     rate.sleep();
-// }
+            this->UpdateRobotLocation(roadlinestart);
+            this->robot_local_state.goalState = reach;
+            cmdpuber->publish(speed);
+        }
+    }
+    rate.sleep();
+}
