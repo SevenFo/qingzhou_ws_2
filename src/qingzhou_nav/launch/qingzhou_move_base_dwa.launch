@@ -14,7 +14,7 @@
 	  
     <param name="base_global_planner" value="global_planner/GlobalPlanner" />
     <param name="planner_frequency" value="2.0" /><!--全局规划的频率-->
-    <param name="planner_patience" value="1.0" />
+    <param name="planner_patience" value="0.6" />
     <!-- <param name="max_planning_retries" value="4"/>全局规划最多尝试4次 -->
     <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
     <param name="controller_frequency" value="10.0" />  <!--本来是5，可能太小了-->

@@ -172,6 +172,7 @@ bool TCP_Sender::AppServiceCB(qingzhou_bringup::app::Request &req,qingzhou_bring
         // ROS_INFO_STREAM_COND(_open_debug, "weak _watchRLCond");
         // this->_watchRLCond.notify_one();
         // return true;
+        return true;
     }
     return false;
 }
@@ -221,6 +222,12 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
         this->UpdateRobotCurruentGoal(goal_unload);
         this->robot_local_state.goalState = active;
         this->ExecGoal();
+
+        //******减速带前减速***********
+        qingzhou_bringup::app req;
+        req.request.statue = 2;
+        this->dynamicparamsclient.call(req);
+        ROS_INFO_NAMED("TCP_Sender", "DYNAMIC PARAPMS OPEN");
         //等到了unload在关闭红绿灯探测吧
 
     }
@@ -260,15 +267,17 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
     
     //ROS_INFO("Answer: %i", result->sequence.back());
     //出发点-转载点 -> 装载点； 装载点 - 交通灯->交通灯； 交通灯 - 卸货点->卸货点； 卸货点 - 车道线出发点->车道线出发点 ->
-    if (state == actionlib::SimpleClientGoalState::SUCCEEDED)
+    if (state == actionlib::SimpleClientGoalState::SUCCEEDED && abs(robotPose.position.x-robot_local_state.goalList[robot_local_state.curruentGoal].x)<0.5 &&abs(robotPose.position.y-robot_local_state.goalList[robot_local_state.curruentGoal].y)<0.5)
     {
-        if(this->robot_local_state.location != unloadtostart)
+        ROS_INFO_STREAM_COND(this->_open_debug, "robot pose: x:" << robotPose.position.x << " y:" << robotPose.position.y << " goal_x:" << robot_local_state.goalList[robot_local_state.curruentGoal].x << " goal_y:" << robot_local_state.goalList[robot_local_state.curruentGoal].y);
+        if (this->robot_local_state.location != unloadtostart)
             this->ClearCostmapAndWait();
         // haveDetectedTfl = false;
         this->robot_local_state.goalState = reach;
         switch (this->robot_local_state.location)
         {
         case starttoload: {
+            
             this->UpdateRobotLocation(load);
             break;
             }
@@ -665,6 +674,10 @@ void TCP_Sender::RunGoal_v2()
                 ROS_INFO_NAMED("TCP_Sender", "robot have been to load, pls pub next goal");
             }
             //开启红绿灯探测
+            qingzhou_bringup::app req;
+            req.request.statue = 2;
+            this->dynamicparamsclient.call(req);
+            ROS_INFO_NAMED("TCP_Sender", "DYNAMIC PARAPMS OPEN");
             this->OpenTflDet();
             break;
         }
@@ -770,7 +783,7 @@ bool TCP_Sender::ClearCostmapAndWait()
     if (clearCostmapClient.call(req)) {
         ROS_INFO_NAMED("TCP_Sender", "clear costmap success!");
         //在转角的时候路径规划没有考虑障碍物？
-        ROS_INFO_NAMED("TCP_Sender", "Sleep 1.0s wating costmap)");
+        ROS_INFO_NAMED("TCP_Sender", "Sleep 1.3s wating costmap)");
         sleepDur = ros::Duration(1.3);
         sleepDur.sleep();
         ROS_INFO_NAMED("TCP_Sender", "weak up");

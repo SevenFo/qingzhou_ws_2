@@ -98,6 +98,7 @@ def detector(Img):
             return colortype
     else:
         print('no image')
+        return 1
 
 flag = 0
 pianyi_befor = 0
@@ -252,26 +253,19 @@ def pianyi_detect(img):
                         # if h <60 and w < 150 : #当只检测到中间最后一点蓝色时，判断为出去
                         #     print('99999')
                         #     return 999
-        elif con_num == 1: #横向蓝线
-            #检测红线
-                cropped_img_1 = color_seperate_1(cropped_img_1)
-                gray_img = cv2.cvtColor(cropped_img_1, cv2.COLOR_BGR2GRAY)
-                # gray_img = cv2.GaussianBlur(gray_img, (5, 5), 0, 0, cv2.BORDER_DEFAULT)
-                ret, img_thresh = cv2.threshold(gray_img, 10, 255, cv2.THRESH_BINARY)
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-                img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel)
-                img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
-                contours, hierarchy = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)    
-                if len(contours) >0 : #如果红色物体数量大于1，则说明就是在红线上
-                    contour2 = []
-                    for c1 in range(len(contours)):
-                        for c2 in range(len(contours[c1])):
-                            contour2.append(contours[c1][c2])
-                    contour2 = np.array(contour2)
-                    (x2, y2, w2, h2) = cv2.boundingRect(contour2)
-                    cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
-                    pianyi = 13 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h #13是凑数
-                    pianyi_text='right'  
+        elif con_num == 1: #横向蓝线和最后一小段蓝白线的蓝线
+                if h < 50 :
+                    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 3) #黄框----------------检测到了最后一小段的蓝白线的蓝色
+                    pianyi = ((x + w / 2) - (img_h / 2)) * FOV_w / img_h
+                    if pianyi > 0:
+                        #print('右偏')
+                        pianyi_text='right'
+                    elif pianyi<0:
+                        #print('左偏')
+                        pianyi_text='left'
+                    else:
+                        # print('左偏')
+                        pianyi_text = 'stright'
                 else: #看见一块蓝色并且真的是蓝线
                     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
                     pianyi = 83-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #平滑过渡
@@ -302,8 +296,11 @@ def pianyi_detect(img):
             # res = cv2.drawContours(img, contour1, -1, (0, 0, 255), 1)
             (x2, y2, w2, h2) = cv2.boundingRect(contour2)
             cv2.rectangle(img, (x2, y2), (x2 + w2, img_h), (255, 0, 255), 3) #红框
-            pianyi = 20 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h
-            pianyi_text='right'
+            if h2 < 50 :
+                pianyi = pianyi_befor
+            else :
+                pianyi = 20 - ((x2 + w2 / 2) - (img_h / 2)) * FOV_w / img_h
+                pianyi_text='right'
             #print('右偏移')
             #print(pianyi)
 
@@ -319,7 +316,7 @@ def pianyi_detect(img):
         pianyi_now = 0 - pianyi_now-10 #这个数要试
         # print("third {}".format(pianyi_now))   
     elif  pianyi_text == 'left' :
-        pianyi_now =  pianyi_now+5 #这个数要试
+        pianyi_now =  pianyi_now+6 #这个数要试 #5
         # print("third {}".format(pianyi_now))   
     # print(nothing_point) #打印出有没有左下角点的干扰
     # if(abs(pianyi - pianyi_befor) > 30) or pianyi_befor == -pianyi_now  or nothing_point ==1: #去除剧烈跳变和检测到左下角点
@@ -391,6 +388,9 @@ if __name__ == '__main__':
             # print("get pic :{}".format(time2-time1))
             if(Img is None):
                 print("img is none")
+                #当检测读取图片失败的时候，让红绿灯为绿灯1，车道线为超出车道线999
+                data.x = 1
+                data.y = 999
             else:
                 # time1 = time.time()
                 if(openColorDetector):

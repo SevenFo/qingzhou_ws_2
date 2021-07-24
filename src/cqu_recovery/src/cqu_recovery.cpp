@@ -33,7 +33,7 @@ namespace cqu_recovery_behavior
             _n = ros::NodeHandle(name);//命名空间解析为 /move_base/name/...
             ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_init", "cqu_recovery_initialize: node name:" << name);
 
-            _n.param("foot_print", _footlenth, 10);
+            _n.param("foot_print", _footlenth, 15);
 
             this->robotCurruentGoalSuber = _n.subscribe<geometry_msgs::PoseStamped>("/move_base/current_goal", 1, &cqu_recovery::RobotCurruentGoalCB, this);
             this->globalPlanSuber = _n.subscribe<nav_msgs::Path>("/move_base/GlobalPlanner/plan",2,&cqu_recovery::GlobalPlanCB,this);
@@ -62,7 +62,12 @@ namespace cqu_recovery_behavior
             double robotYaw = Degree360(tf::getYaw(robotPose.pose.orientation));
             double K = Degree360(_planDegree);
             ROS_INFO_STREAM_NAMED("cqu_recovery:", "K value:" << K / 3.14159 * 180 << " robotYaw:" << robotYaw / 3.14159 * 180);
-            if (K >  robotYaw)
+            if (abs(K-robotYaw) < (10/180*3.1415926))
+            {
+                ROS_INFO_STREAM_NAMED("cqu recovery", "cqu recovery: K_value ~ robotYaw. Z value = 0.0");
+                tmpControl.angular.z = 0.0;
+            }
+            else if (K >  robotYaw)
             {
                 if(abs(K-robotYaw)>3.1415926)
                 {
