@@ -9,8 +9,8 @@ local_costmap:
 
   # Rate parameters
 
-  update_frequency:  10.0 #  
-  publish_frequency: 5.0 # default 0.0
+  update_frequency:  4.0 #  
+  publish_frequency: 1.0 # default 0.0
 
   # Map management parameters
 
@@ -19,8 +19,8 @@ local_costmap:
 
   # The following parameters can be overwritten by some layers, namely the static map layer.
   # 下面的参数会被静态地图层重写
-  width: 8.0
-  height: 8.0
+  width: 3.0
+  height: 5.0 
   resolution: 0.05
   origin_x: 0.0
   origin_y: 0.0

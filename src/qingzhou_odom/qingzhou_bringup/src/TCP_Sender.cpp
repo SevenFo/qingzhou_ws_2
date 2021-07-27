@@ -249,6 +249,12 @@ void TCP_Sender::SubLineCB(const geometry_msgs::Vector3::ConstPtr &msg)
             this->UpdateRobotLocation(roadlineout);
             if (this->StopRLDet())
             {
+                qingzhou_bringup::app req;
+                req.request.statue = 4;
+                this->dynamicparamsclient.call(req);
+                ROS_INFO_NAMED("TCP_Sender", "DYNAMIC PARAPMS OPEN");
+
+                
             }
             else{
                 ROS_INFO_NAMED("TCP_Sender", "Oh no! robot cant stop!!");
@@ -923,15 +929,15 @@ void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Pub
 
 
 
-void TCP_Sender::InitializePose()
-{
-    auto initialPose = geometry_msgs::PoseWithCovarianceStamped();
-    initialPose.header.frame_id = "map";
-    initialPose.header.stamp = ros::Time::now();
-    initialPose.pose.pose.position.x = 0;
-    initialPose.pose.pose.position.y = 0;
-    initialPose.pose.pose.orientation = tf::createQuaternionMsgFromYaw(0);
+// void TCP_Sender::InitializePose()
+// {
+//     auto initialPose = geometry_msgs::PoseWithCovarianceStamped();
+//     initialPose.header.frame_id = "map";
+//     initialPose.header.stamp = ros::Time::now();
+//     initialPose.pose.pose.position.x = 0;
+//     initialPose.pose.pose.position.y = 0;
+//     initialPose.pose.pose.orientation = tf::createQuaternionMsgFromYaw(0);
 
-    this->_initialposePuber.publish(initialPose);
-    ROS_INFO_STREAM_COND(_open_debug, "Initialize robot pose!");
-}
+//     this->_initialposePuber.publish(initialPose);
+//     ROS_INFO_STREAM_COND(_open_debug, "Initialize robot pose!");
+// }

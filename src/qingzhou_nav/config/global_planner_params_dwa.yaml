@@ -25,7 +25,7 @@ GlobalPlanner:                                  # Also see: http://wiki.ros.org/
   lethal_cost: 200                              # 致命代价值,默认是设置为253,可以动态来配置该参数.    default 253
   neutral_cost: 80                              # 中等代价值,默认设置是50,可以动态配置该参数.   default 50
   cost_factor: 1.1976                             # 代价地图与每个代价值相乘的因子.   Factor to multiply each cost from costmap by, default 3.0
-  publish_potential: true                       # 是否发布costmap的势函数.  Publish Potential Costmap (this is not like the navfn pointcloud2 potential), default true
+  publish_potential: false                       # 是否发布costmap的势函数.  Publish Potential Costmap (this is not like the navfn pointcloud2 potential), default true
 
 
   planner_frequency: 0.0 #The rate in Hz at which to run the global planning loop. If the frequency is set to 0.0, the global planner will only run when a new goal is received or the local planner reports that its path is blocked. New in navigation 1.6.0

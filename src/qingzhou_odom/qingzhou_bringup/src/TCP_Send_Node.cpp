@@ -34,7 +34,7 @@ int main(int argc, char **  argv)
         tcpsender->WaitServices();
         boost::thread sendMsgThread(boost::bind(&SendMsg,tcpsender));
         // boost::thread retriveMsgThread(boost::bind(&RetriveRobotMsg, &robotControlMsg, tcpsender,&haveNewMsg));
-        tcpsender->InitializePose();
+        // tcpsender->InitializePose();
         tcpsender->ClearCostmapFirstly();
         while (ros::ok())
         {

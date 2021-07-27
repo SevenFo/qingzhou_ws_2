@@ -468,8 +468,8 @@ if __name__ == '__main__':
                 if(controlFlag == 1 or False): #原来是false
                     # print(pianyi)
                     # print("vision controling...")
-                    cmdData.linear.x = 1.0
-                    cmdData.angular.z = (pianyi*1.6 + 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837   1.6
+                    cmdData.linear.x = 1.2
+                    cmdData.angular.z = (pianyi*1.8 + 3.489) /180.0*3.1415926 #新增加了data.y的系数和最后的常数项 k =0.80837   1.6
                     cmdpub.publish(cmdData)
 
                     # pianyicount = 0

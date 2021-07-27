@@ -12,8 +12,8 @@ global_costmap:
 
   # Rate parameters
 
-  update_frequency: 1 #
-  publish_frequency: 1.0 # default 0.0
+  update_frequency: 0.7 #
+  publish_frequency: 0.0 # default 0.0
 
   # Map management parameters
 
