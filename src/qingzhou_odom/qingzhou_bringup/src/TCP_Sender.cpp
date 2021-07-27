@@ -29,6 +29,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",50);
     _goalStatusPuber = nh.advertise<actionlib_msgs::GoalStatus>("/TCP_Sender/GoalStatus", 1);
     _locationInMapPuber = nh.advertise<geometry_msgs::Pose>("/TCP_Sender/PoseInMap", 2);
+    _initialposePuber = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1);
     //Action Client
     moveBaseActionClientPtr = new MoveBaseActionClient("move_base");
     //Timre
@@ -916,4 +917,21 @@ void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Pub
         }
     }
     rate.sleep();
+}
+
+
+
+
+
+void TCP_Sender::InitializePose()
+{
+    auto initialPose = geometry_msgs::PoseWithCovarianceStamped();
+    initialPose.header.frame_id = "map";
+    initialPose.header.stamp = ros::Time::now();
+    initialPose.pose.pose.position.x = 0;
+    initialPose.pose.pose.position.y = 0;
+    initialPose.pose.pose.orientation = tf::createQuaternionMsgFromYaw(0);
+
+    this->_initialposePuber.publish(initialPose);
+    ROS_INFO_STREAM_COND(_open_debug, "Initialize robot pose!");
 }

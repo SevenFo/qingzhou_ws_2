@@ -34,9 +34,8 @@ int main(int argc, char **  argv)
         tcpsender->WaitServices();
         boost::thread sendMsgThread(boost::bind(&SendMsg,tcpsender));
         // boost::thread retriveMsgThread(boost::bind(&RetriveRobotMsg, &robotControlMsg, tcpsender,&haveNewMsg));
+        tcpsender->InitializePose();
         tcpsender->ClearCostmapFirstly();
-        // timer.start(); //暂时注释
-        
         while (ros::ok())
         {
             ros::spinOnce();
@@ -115,6 +114,11 @@ int main(int argc, char **  argv)
                         tcpsender->UpdateRobotLocation(robotControlMsg.location);
                         break;
                     }
+                    // case 0x09://initialize pose
+                    // {
+                    //     tcpsender->InitializePose();
+                    //     break;
+                    // }
                     case 0x99://pause
                     {
                         tcpsender->moveBaseActionClientPtr->cancelAllGoals();

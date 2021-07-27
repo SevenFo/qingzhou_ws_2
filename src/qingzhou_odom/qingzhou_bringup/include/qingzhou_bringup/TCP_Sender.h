@@ -211,6 +211,7 @@ private:
     ros::ServiceClient clearCostmapClient;//清除costmap
     ros::ServiceClient dynamicparamsclient;
     ros::ServiceServer appServiceServer;
+    ros::Publisher _initialposePuber;
     ros::Publisher _currentGoalPuber;
     ros::Publisher _goalStatusPuber;
     ros::Publisher _locationInMapPuber;
@@ -418,6 +419,8 @@ public:
 
     //监视机器人是否到达车道线起点并取消goal让视觉接管控制
     void WatchRLStartAndCancleGoal(MoveBaseActionClient *client, ros::Publisher *cmdpuber);
+
+    void InitializePose();
 };
 
 #endif
