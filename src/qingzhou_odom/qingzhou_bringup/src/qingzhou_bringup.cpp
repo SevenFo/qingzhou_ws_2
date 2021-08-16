@@ -8,6 +8,7 @@ long long LeftticksPer2PI = 0;
 long long rightticksPer2PI = 0;     
 
 // 构造函数，初始化
+
 actuator::actuator(ros::NodeHandle handle) 
 { 
    m_baudrate = 115200;             
@@ -55,7 +56,7 @@ actuator::actuator(ros::NodeHandle handle)
       std::cout<<"[qingzhou_actuator-->]"<<"Serial port failed!"<<std::endl;                  
     } 
 	
-    sub_move_base = handle.subscribe("cmd_vel",1,&actuator::callback_move_base,this);   
+    sub_move_base = handle.subscribe("cmd_vel_filted",1,&actuator::callback_move_base,this);   
 
     pub_imu = handle.advertise<sensor_msgs::Imu>("raw", 2);	                                                 
     pub_mag = handle.advertise<sensor_msgs::MagneticField>("imu/mag", 5);                                    
@@ -233,14 +234,16 @@ void actuator::sendCarInfoKernel()
     buf[6] = (int)moveBaseControl.TargetModeSelect;	    //0-->person control,1-->auto control (not used)
     buf[7] = (int)moveBaseControl.TargetShiftPosition;  //targetshiftposition  0-->P stop;1-->R;2-->D. (not used)
   
-    buf[8] = 0;		                                        
+    buf[8] = 8;		//heart beat                                        
     unsigned char sum = 0;
     for(int i = 2; i < 19; ++i)                             
         sum += buf[i];
     buf[9] = (unsigned char)(sum);                      
     size_t writesize = ser.write(buf,10);
-    if(debug)
-        std::cout << "debug: sended messages to actuator: speed: "<<moveBaseControl.TargetSpeed<<" angle:"<<moveBaseControl.TargetAngle<<" left or right:"<<moveBaseControl.TargetAngleDir<<" mode:"<<moveBaseControl.TargetModeSelect<<" shiftPosition:"<<moveBaseControl.TargetShiftPosition<<std::endl;
+    // debug = true;
+
+    if (debug)
+      std::cout << "debug: sended messages to actuator: speed: " << moveBaseControl.TargetSpeed << " angle:" << moveBaseControl.TargetAngle << " left or right:" << moveBaseControl.TargetAngleDir << " mode:" << moveBaseControl.TargetModeSelect << " shiftPosition:" << moveBaseControl.TargetShiftPosition << std::endl;
 }
 
 //接收下位机发送来的数据

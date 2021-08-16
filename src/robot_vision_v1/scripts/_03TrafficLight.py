@@ -16,7 +16,7 @@ Green2 = np.array([35, 128, 10.]) #没什么电时候的绿色
 Colors = (Red, Green1,Green2,Yellow)
 # ColorsName = ('Red', 'Yellow', 'Green')
 ColorsName = ('Red', 'Green1','Green2','Yellow')
-DistThreshold =  5000   # 颜色距离阈值
+DistThreshold =  6000   # 颜色距离阈值 #原来是5000，分辨能力较弱
 #DistThreshold =  2000   # 颜色距离阈值
 
 def JudgeLightColor(Light):
@@ -58,7 +58,7 @@ def TrafficLight(MarkerROI, Img):
 			HullArea = cv2.contourArea(Hull)
 			# print(Area)
 			# print(Area / HullArea)
-			if Area > 20 and Area < 1000 and Area / HullArea > 0.9:
+			if Area > 15 and Area < 1000 and Area / HullArea > 0.9: # Area原来是20 可能太大了
 			# if Area > 2 and Area < 1000 and Area / HullArea > 0.9:
 				sel_contours.append(contour)
 				# 形态学提取外轮廓区域

@@ -50,6 +50,8 @@
 
   <node pkg="qingzhou_bringup" type="footprint_puber.py" name="footprint_puber_node" output="screen">
   </node>
-    <node pkg="tf" type="static_transform_publisher" name="base_link_to_imulink"
-    args="-0.08 0.0 0.05 0.0 0.0  0.0 /base_link /imu_link 50" />
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_imulink"
+  args="-0.08 0.0 0.05 0.0 0.0  0.0 /base_link /imu_link 50" />
+  <node pkg="qingzhou_bringup" type="CmdvelFilter.py" name="cmdvel_filter" output = "screen">
+  </node>
 </launch>

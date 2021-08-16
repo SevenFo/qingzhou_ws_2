@@ -71,7 +71,7 @@ int main(int argc, char **  argv)
                         tcpsender->UpdateRobotCurruentGoal(robotControlMsg.curruentGoal);
                         ROS_INFO_NAMED("TCP_Sender_Node","updated!");
                         tcpsender->UpdateRobotLocation(robotControlMsg.location);
-                        tcpsender->ExecGoal();
+                        tcpsender->RunGoalManually(robotControlMsg.location);
                         break;
                     }
                     case 0x04:

@@ -37,10 +37,13 @@ namespace cqu_recovery_behavior
 
             this->robotCurruentGoalSuber = _n.subscribe<geometry_msgs::PoseStamped>("/move_base/current_goal", 1, &cqu_recovery::RobotCurruentGoalCB, this);
             this->globalPlanSuber = _n.subscribe<nav_msgs::Path>("/move_base/GlobalPlanner/plan",2,&cqu_recovery::GlobalPlanCB,this);
+            this->localPlanSuber = _n.subscribe<nav_msgs::Path>("/move_base/DWAPlannerROS/local_plan",2,&cqu_recovery::LocalPlanCB,this);
+
+
 
             _globalKValue = 0;
             isInitialize = true;
-            _debug = true;
+            _debug = false;
         }
         else
         {
@@ -60,7 +63,11 @@ namespace cqu_recovery_behavior
         {
             tf::Quaternion quat;
             double robotYaw = Degree360(tf::getYaw(robotPose.pose.orientation));
-            double K = Degree360(_planDegree);
+            double K = 0;
+            if (false)
+                K = Degree360(_localPlanDegree);
+            else
+                K = Degree360(_globalPlanDegree);
             ROS_INFO_STREAM_NAMED("cqu_recovery:", "K value:" << K / 3.14159 * 180 << " robotYaw:" << robotYaw / 3.14159 * 180);
             if (abs(K-robotYaw) < (10/180*3.1415926))
             {
@@ -134,17 +141,41 @@ namespace cqu_recovery_behavior
         if(msg.get()->poses.size() < _footlenth+1)
         {
             ROS_INFO_STREAM_NAMED("cqu_recvoery", "cqu_recovery: global plan too short");
+            isGlobalPlanValid = false;
             return;
         }
-        _planPoint1 = msg.get()->poses.at(0).pose;
-        _planPoint2 = msg.get()->poses.at(_footlenth).pose;
+        _globalPlanPoint1 = msg.get()->poses.at(0).pose;
+        _globalPlanPoint2 = msg.get()->poses.at(_footlenth).pose;
 
-        // ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_globalplancb", "cqu_recovery_globalplancb:Global plan p1x:" <<_planPoint1.position.x<<" p1y:"<<_planPoint1.position.y <<" p2x:"<<_planPoint2.position.x << "p2y:"<<_planPoint2.position.y);
+        // ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_globalplancb", "cqu_recovery_globalplancb:Global plan p1x:" <<_globalPlanPoint1.position.x<<" p1y:"<<_globalPlanPoint1.position.y <<" p2x:"<<_globalPlanPoint2.position.x << "p2y:"<<_globalPlanPoint2.position.y);
 
-        _globalKValue = this->CalculateKValue(_planPoint1,_planPoint2);
-        _planDegree = atan2(_planPoint2.position.y - _planPoint1.position.y, _planPoint2.position.x - _planPoint1.position.x);
-
+        _globalKValue = this->CalculateKValue(_globalPlanPoint1,_globalPlanPoint2);
+        _globalPlanDegree = atan2(_globalPlanPoint2.position.y - _globalPlanPoint1.position.y, _globalPlanPoint2.position.x - _globalPlanPoint1.position.x);
+        isGlobalPlanValid = true;
         // ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_globalplancb", "cqu_recovery_globalplancb: _globalKValue:" <<_globalKValue <<" degree: "<<atan(_globalKValue)/3.1415926*180);
+    }
+    
+    void cqu_recovery::LocalPlanCB(const nav_msgs::PathConstPtr &msg)
+    {
+        //如果局部有效，我们就不用全局的路径来计算plan角度
+        // if(isLocalPlanValid)
+        //     return;
+        if (msg.get()->poses.size() < _footlenth + 1)
+        {
+            ROS_INFO_STREAM_NAMED("cqu_recvoery", "cqu_recovery: local plan too short, we well choose global plan");
+            isLocalPlanValid = false;
+            return;
+        }
+        _localPlanPoint1 = msg.get()->poses.at(0).pose;
+        _localPlanPoint2 = msg.get()->poses.at(_footlenth).pose;
+
+        // ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_globalplancb", "cqu_recovery_globalplancb:Global plan p1x:" <<_globalPlanPoint1.position.x<<" p1y:"<<_globalPlanPoint1.position.y <<" p2x:"<<_globalPlanPoint2.position.x << "p2y:"<<_globalPlanPoint2.position.y);
+
+        _localKValue = this->CalculateKValue(_localPlanPoint1,_localPlanPoint2);
+        _localPlanDegree = atan2(_localPlanPoint2.position.y - _localPlanPoint1.position.y, _localPlanPoint2.position.x - _localPlanPoint1.position.x);
+        isLocalPlanValid = true;
+        // ROS_INFO_STREAM_COND_NAMED(_debug, "cqu_recovery_localplancb", "cqu_recovery_localplancb: _localKValue:" <<_localKValue <<" degree: "<<atan(_localKValue)/3.1415926*180);
+
     }
 
     double cqu_recovery::NormalizeDegree(double degree, double minDegree, double maxDegree)

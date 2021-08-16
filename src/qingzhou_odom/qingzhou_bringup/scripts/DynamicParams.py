@@ -26,22 +26,32 @@ class DynamicParamsClient():
         #self.log("unloadtorlstart","wait for service")
         rospy.wait_for_service("/move_base/DWAPlannerROS/set_parameters",timeout=100)
         rospy.wait_for_service("/TCP_Sender/app",timeout = 100)
+        rospy.wait_for_service("/cmdvel_filter_client",timeout = 100)
  
         self.debug = True
         self.DWAClient = client.Client("/move_base/DWAPlannerROS",0.2,self.DWAParamsChangedCallback)
         self.goalStatusSuber = rospy.Subscriber("/TCP_Sender/GoalStatus",GoalStatus,self.GoalStatusCallback,queue_size=1)
         self.poseSuber = rospy.Subscriber("/TCP_Sender/PoseInMap",Pose,self.PoseCallback,queue_size=2)
-        self.cmdPuber = rospy.Publisher("/cmd_vel",Twist,queue_size=3)
+        self.cmdPuber = rospy.Publisher("/cmd_vel_filted",Twist,queue_size=3)
         self.tcpsenderAppClient = rospy.ServiceProxy("/TCP_Sender/app",app)
+        self.cmd_filter_client = rospy.ServiceProxy("/cmdvel_filter_client",app)
+        
+        self.turnTimer = rospy.Timer(rospy.Duration(1.0), self.turn_timer_callback)
+        
+        self.normal = {"min_vel_x":0.4,"max_vel_x":1.0,"min_vel_theta":0.1,"max_vel_theta":1.0}
+
+        # self.turnTimer.
+
         self.DWAConfig = None
         self.pose = Pose()
         self.goalStatus = GoalStatus()
 
         self.openUnloadToRLstart = False
         self.openLoadToUnload = False
-        self.DWACondition = [False,False]
+        self.DWACondition = [False,False,False]
         self.openStartToLoad = False
         self.openRLouttostart = False
+        self.load_move = False
         self.yaw = None
         self.srv = rospy.Service("/DynamicParamsClient",app,self.srvCallback)
         rospy.loginfo("set up dpc")
@@ -52,34 +62,39 @@ class DynamicParamsClient():
         if(req.statue == 1):
             self.DWACondition[0] = False
             self.DWACondition[1] = False
-            self.log("unloadtorlstart","open unload to rl start")
+            self.log("","open unload to rl start")
             self.openUnloadToRLstart = True
         if(req.statue == 2):
             self.openLoadToUnload = True
         if(req.statue == 3):
             self.DWACondition[0] = False
             self.DWACondition[1] = False
-            self.log("unloadtorlstart","open start to load")
+            self.log("","open openStartToLoad")
             self.openStartToLoad = True
         if(req.statue == 4):
             #出S道
             self.DWACondition[0] = False
             self.DWACondition[1] = False
-            self.log("unloadtorlstart","open start to load")
+            self.log("","open openRLouttostart")
             self.openRLouttostart = True
+        if(req.statue == 5):#装货区是否前进
+            self.load_move = True
         return 0
+
+    def turn_timer_callback(self,_):
+        pass
+
     def RLouttostart(self):
         if(not self.DWACondition[0] and not self.DWACondition[1]):#进入装货区前减速
-            self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
+            # self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
             # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-            self.DWAClient.update_configuration({"max_vel_x":1.2})
-            self.log("unloadtorlstart","set max_vel_x 1.2")
+            self.DWAClient.update_configuration({"min_vel_x":0.8,"max_vel_x":1.2,"max_vel_theta":2.0})
+            self.log("","[RLouttostart]: set max_vel_x: 1.2, min_vel_x:1.2 max_vel_theta:2.0")
             self.DWACondition[0] = True
-        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x>-0.1): #恢复配置
-            self.DWAClient.update_configuration({"max_vel_x":self.DWAConfig["max_vel_x"]})
-            self.log("unloadtorlstart","reset max_vel_x:{}".format(self.DWAConfig["max_vel_x"]))
-            self.DWAConfig[0] = False
-            self.DWAConfig[1] = False
+        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x>-0.8): #恢复配置
+            self.DWAClient.update_configuration(self.normal)
+            self.log("","[RLouttostart]: RESET CONFIG")
+            self.DWACondition = [False,False,False]
             self.openRLouttostart = False
     def PoseCallback(self,pose):
         self.pose = pose
@@ -106,61 +121,78 @@ class DynamicParamsClient():
         #     self.DWAClient.update_configuration({"min_vel_x":0.8,"min_vel_theta":0.1,"max_vel_theta":1.3})
         #     self.DWAMinVelXChanged = True
         # pass
+
+    # 
     def loadtounload(self):
-        if(not self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y<-6.0):#过红绿灯减速
-            self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
-            # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-            self.DWAClient.update_configuration({"max_vel_x":0.8})
-            self.log("unloadtorlstart","set max_vel_x 0.8")
+        if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2]):# 到达起始区区域的时候向前开一点距离
+
+            cmd_filter_client_request = app._request_class()
+            cmd_filter_client_request.statue = 1
+            self.cmd_filter_client(cmd_filter_client_request)
+            self.log("","[loadtounload]: stop cmd control and move forward a little")
+            cmd_data = Twist()
+            cmd_data.linear.x = 0.8
+            cmd_data.angular.z = -0.3# turn left a little
+            self.cmdPuber.publish(cmd_data)        
+
             self.DWACondition[0] = True
-        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x<-1.3):#减速带前减速
-            self.DWAClient.update_configuration({"max_vel_x":0.5})
-            self.log("unloadtorlstart","set max_vel_x 0.5")
-            self.DWACondition[0] = True
+        elif(self.DWACondition[0] and (not self.DWACondition[1]) and (not self.DWACondition[2]) and (self.pose.position.y < -3.5)):
+            # 恢复cmd控制
+            cmd_filter_client_request = app._request_class()
+            cmd_filter_client_request.statue = 2
+            self.cmd_filter_client(cmd_filter_client_request)
+            self.log("","[loadtounload]: reset cmd control")
             self.DWACondition[1] = True
-        if(self.DWACondition[0] and self.DWACondition[1] and self.pose.position.y >-6.8): #恢复配置
-            self.DWAClient.update_configuration({"max_vel_x":self.DWAConfig["max_vel_x"]})
-            self.log("unloadtorlstart","reset max_vel_x:{}".format(self.DWAConfig["max_vel_x"]))
-            self.DWAConfig[0] = False
-            self.DWAConfig[1] = False
+            pass
+        elif(self.DWACondition[0] and  self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x<-1.1):#减速带前减速
+            self.DWAClient.update_configuration({"max_vel_x":0.8})
+            self.log("","[loadtounload]: set max_vel_x 0.8")
+            self.DWACondition[2] = True
+        elif(self.DWACondition[0] and self.DWACondition[1] and self.DWACondition[2] and self.pose.position.y >-7.0): #恢复配置
+            self.DWAClient.update_configuration(self.normal)
+            self.log("","[loadtounload]: RESET CONFIG")
+            self.DWACondition = [False,False,False]
             self.openLoadToUnload = False
 
+    # 先固定1.2 转弯前恢复
     def starttoload(self):
         if(not self.DWACondition[0] and not self.DWACondition[1]):#进入装货区前减速
-            self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
+
             # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-            self.DWAClient.update_configuration({"min_vel_x":1.0})
-            self.log("unloadtorlstart","set min_vel_x 1.2")
+            self.DWAClient.update_configuration({"min_vel_x":1.1,"max_vel_x":1.1,"max_vel_theta":1.0,"min_vel_theta":0.3})
+            self.log("","[starttoload]: set min_vel_x 1.2 max_vel_x:1.2 max_vel_theta:1.1 min_vel_theta:0.3")
             self.DWACondition[0] = True
-        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y <-3.5): #恢复配置
-            self.DWAClient.update_configuration({"min_vel_x":self.DWAConfig["min_vel_x"]})
-            self.log("unloadtorlstart","reset min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-            self.DWAConfig[0] = False
-            self.DWAConfig[1] = False
+        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y<-3.0): #恢复配置
+            self.DWAClient.update_configuration(self.normal)
+            self.log("","[starttoload]: RESET CONFIG")
+            self.DWACondition = [False,False,False]
+
             self.openStartToLoad = False
 
     
 
     def unloadtorlstart(self):
-        if(not self.DWACondition[0] and not self.DWACondition[1]):
+        if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2]):
             # 提高速度
             self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
             # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-            self.DWAClient.update_configuration({"min_vel_x":1.0,"min_vel_theta":0.1,"max_vel_theta":2.0})
-            self.log("unloadtorlstart","set min_vel_x 1.0; min_vel_theta 0.1； max_vel_theta: 1.5")
+            self.DWAClient.update_configuration({"min_vel_x":1.0,"max_vel_x":1.0,"min_vel_theta":0.1,"max_vel_theta":1.5})
+            self.log("","[unloadtorlstart]: set min_vel_x :1.0; max_vel_x:1.0 min_vel_theta 0.1； max_vel_theta: 2.0")
             self.DWACondition[0] = True
-        elif(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.x > -0.2):
-            self.DWAClient.update_configuration({"min_vel_x":self.DWAConfig["min_vel_x"],"max_vel_theta":1.3,"min_vel_theta":self.DWAConfig["min_vel_theta"],"max_vel_x":0.5})
-            self.log("unloadtorlstart","set min_vel_x {}; min_vel_theta {}； max_vel_theta: {}; max_vel_x:0.5".format(self.DWAConfig["min_vel_x"],self.DWAConfig["min_vel_theta"],1.3))
-            # self.log("DWAParamCallback","min_vel_x set to:".format(self.DWAConfig["min_vel_x"]))
-            # self.DWACondition[0] = False
+        elif(self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x > -0.25):
             self.DWACondition[1] = True
+            self.log("","[unloadtorlstart]: prepare tp cancel goal")
             self.tcpsenderAppClient(1)#call service to weak thread
-        elif(self.DWACondition[1] and self.DWACondition[0] and self.pose.position.y > -4.16):
-            self.DWAClient.update_configuration({"max_vel_x":self.DWAConfig["max_vel_x"],"max_vel_theta":self.DWAConfig["max_vel_theta"],"min_vel_x":self.DWAConfig["min_vel_x"]})
-            self.log("unloadtorlstart","reset max_vel_x:{},max_vel_theta:{},min_vel_x:{}".format(self.DWAConfig["max_vel_x"],self.DWAConfig["max_vel_theta"],self.DWAConfig["min_vel_x"]))
-            self.DWACondition[1] = False
-            self.DWACondition[0] = False
+            # self.DWAClient.update_configuration({"min_vel_x":1.0,"max_vel_x":1.0,"min_vel_theta":0.1,"max_vel_theta":1.5})           
+            # self.cmd_filter_client(3) # limit angular vel not < 1.5
+        elif(self.DWACondition[0] and self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.y >-5.1    ):
+            # self.log("","[unloadtorlstart]: unlimit angular speed")
+            # self.cmd_filter_client(2) #open cmd filter/cancel all limit
+            self.DWACondition[2] = True
+        elif(self.DWACondition[1] and self.DWACondition[0] and self.pose.position.y > -3.8):
+            self.DWAClient.update_configuration(self.normal)
+            self.log("","[unloadtorlstart]: RESET CONFIG")
+            self.DWACondition = [False,False,False]
             self.openUnloadToRLstart = False
 
     def DWAParamsChangedCallback(self,config):

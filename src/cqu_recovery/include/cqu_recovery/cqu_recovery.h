@@ -58,16 +58,30 @@ namespace cqu_recovery_behavior
 
         int _footlenth;//计算全局路径斜率时的步长
         double _globalKValue;
-        double _planDegree;
+        double _localKValue;
+        double _globalPlanDegree;
+        double _localPlanDegree;
 
-        geometry_msgs::Pose _planPoint1;
-        geometry_msgs::Pose _planPoint2;
+
+        bool isLocalPlanValid;
+        bool isGlobalPlanValid;
+
+
+
+        geometry_msgs::Pose _globalPlanPoint1;
+        geometry_msgs::Pose _globalPlanPoint2;
+        geometry_msgs::Pose _localPlanPoint1;
+        geometry_msgs::Pose _localPlanPoint2;
+
 
         ros::Subscriber robotCurruentGoalSuber;
         ros::Subscriber globalPlanSuber;
+        ros::Subscriber localPlanSuber;
         geometry_msgs::Pose _robotCurruentGoal;
         void RobotCurruentGoalCB(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void GlobalPlanCB(const nav_msgs::PathConstPtr &msg);
+        void LocalPlanCB(const nav_msgs::PathConstPtr &msg);
+
         double CalculateKValue(geometry_msgs::Pose startp, geometry_msgs::Pose endp);
         double CalculateKValue(const geometry_msgs::Point startp, const geometry_msgs::Point endp);
         double NormalizeDegree(double degree, double minDegree=-3.14/2, double maxDegree=3.14/2);

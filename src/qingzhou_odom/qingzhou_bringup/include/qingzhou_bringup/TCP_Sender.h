@@ -210,7 +210,10 @@ private:
     ros::ServiceClient clearCostmapFirstlyClient;//清    除costmap 在起点的时候
     ros::ServiceClient clearCostmapClient;//清除costmap
     ros::ServiceClient dynamicparamsclient;
+    ros::ServiceClient cmdvelFilterClient;
+
     ros::ServiceServer appServiceServer;
+
     ros::Publisher _initialposePuber;
     ros::Publisher _currentGoalPuber;
     ros::Publisher _goalStatusPuber;
@@ -278,6 +281,7 @@ public:
     void _RunSpeedPlan();
     MoveBaseActionClient * moveBaseActionClientPtr;
     ros::Publisher cmdvelPuber;
+    ros::Publisher cmdvelfiltedPuber;
     rls robot_local_state;
     // move_base_msgs::MoveBaseGoal startPoint;
     // move_base_msgs::MoveBaseGoal getGoodsPoint;
@@ -302,6 +306,8 @@ public:
     bool AppServiceCB(qingzhou_bringup::app::Request &req,qingzhou_bringup::app::Response &res);
 
     //********************************
+
+
 
 
     bool SocketInit();//初始化socket
@@ -419,8 +425,12 @@ public:
 
     //监视机器人是否到达车道线起点并取消goal让视觉接管控制
     void WatchRLStartAndCancleGoal(MoveBaseActionClient *client, ros::Publisher *cmdpuber);
+    void UpdateToReachLocation();//goaldonnecb里面reachsuccess的分支部分，为了方便手动判断目标点是否到达，当手动判断目标点到达之后就调用这个函数
 
+    void RunGoalManually();
     // void InitializePose();
+
+    void RunGoalManually(ROBOTLOCATION location);
 };
 
 #endif
