@@ -425,7 +425,7 @@ def pianyi_detect(img):
         pianyi_now = 0 - pianyi_now-12#这个数要试 #10
         # print("third {}".format(pianyi_now))   
     elif  pianyi_text == 'left' :
-        pianyi_now =  pianyi_now+12 #这个数要试 #6
+        pianyi_now =  pianyi_now+9 #这个数要试 #6
         # print("third {}".format(pianyi_now))   
     # print(nothing_point) #打印出有没有左下角点的干扰
     # if(abs(pianyi - pianyi_befor) > 30) or pianyi_befor == -pianyi_now  or nothing_point ==1: #去除剧烈跳变和检测到左下角点
@@ -577,7 +577,7 @@ if __name__ == '__main__':
                     # print("****************stop****************")
                     cmdData.linear.x = 1.2+acc*(time.time()-startT)  #1.2
                     print("now speed:{}".format(cmdData.linear.x))
-                    cmdData.angular.z = -1.5 #-1.3
+                    cmdData.angular.z = -1.6 #-1.3
                     cmdpub.publish(cmdData)
 
                 pianyibefore = pianyi

@@ -57,7 +57,7 @@ class CmdvelFilter(object):
 
     def cmd_filter(self):
         if(self.is_pub_cmd and self.is_open_cmd):
-            if(self.cmd_data_to_pub.linear.x - self.cmd_data.linear.x > 0.2):
+            if(self.cmd_data_to_pub.linear.x - self.cmd_data.linear.x > 0.2 or self.cmd_data_to_pub.linear.x - self.cmd_data.linear.x < -0.2):
                 #过滤过大的速度变化
                 rospy.logwarn("注意速度跳变过大")
                 self.cmd_data_to_pub.linear.x = self.cmd_data_to_pub.linear.x + (self.cmd_data.linear.x - self.cmd_data_to_pub.linear.x)*0.15

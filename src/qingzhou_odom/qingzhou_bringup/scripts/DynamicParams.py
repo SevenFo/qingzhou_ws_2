@@ -100,48 +100,25 @@ class DynamicParamsClient():
         self.pose = pose
         (r,p,self.yaw) = tf.transformations.euler_from_quaternion([pose.orientation.x,pose.orientation.y,pose.orientation.z,pose.orientation.w])
         self.yaw = self.yaw/numpy.pi*180
-
-        # _t = Twist()
-        # _t.linear.x = 0.5
-        # _t.angular.z = _t.linear.x/1*3*(-90-self.yaw)*numpy.pi/180 + (1.53-self.pose.position.x)*3
-        # self.cmdPuber.publish(_t)
-
-        # print(self.yaw)
-        # if(self.DWAMinVelXChanged and pose.position.x > -1.2):
-        #     self.DWAClient.update_configuration({"min_vel_x":self.DWAConfig["min_vel_x"],"max_vel_theta":self.DWAConfig["max_vel_theta"],"min_vel_theta":self.DWAConfig["min_vel_theta"]})
-        #     self.log("DWAParamCallback","min_vel_x set to:".format(self.DWAConfig["min_vel_x"]))
-        #     self.DWAMinVelXChanged = False
         pass
     
     def GoalStatusCallback(self,status):
         self.goalStatus = GoalStatus
-        # if(status.goal_id.id == "[road line start]" and not self.DWAMinVelXChanged and self.pose.position.x<-2.0):
-        #     self.DWAConfig = self.DWAClient.get_configuration()
-        #     self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-        #     self.DWAClient.update_configuration({"min_vel_x":0.8,"min_vel_theta":0.1,"max_vel_theta":1.3})
-        #     self.DWAMinVelXChanged = True
-        # pass
 
-    # 
     def loadtounload(self):
         if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2]):# 到达起始区区域的时候向前开一点距离
 
-            cmd_filter_client_request = app._request_class()
-            cmd_filter_client_request.statue = 1
-            self.cmd_filter_client(cmd_filter_client_request)
-            self.log("","[loadtounload]: stop cmd control and move forward a little")
-            cmd_data = Twist()
-            cmd_data.linear.x = 0.8
-            cmd_data.angular.z = -0.3# turn left a little
-            self.cmdPuber.publish(cmd_data)        
-
+            self.log("","[loadtounload]: pub goal to tfl") 
+            tcp_sender_client_request = app._request_class()
+            tcp_sender_client_request.statue = 3 #pub goal to tfl
+            self.tcpsenderAppClient(tcp_sender_client_request)
             self.DWACondition[0] = True
         elif(self.DWACondition[0] and (not self.DWACondition[1]) and (not self.DWACondition[2]) and (self.pose.position.y < -3.5)):
             # 恢复cmd控制
-            cmd_filter_client_request = app._request_class()
-            cmd_filter_client_request.statue = 2
-            self.cmd_filter_client(cmd_filter_client_request)
-            self.log("","[loadtounload]: reset cmd control")
+            self.log("","[loadtounload]:pub goal to unload (maybe)")
+            tcp_sender_client_request = app._request_class()
+            tcp_sender_client_request.statue = 4 #pub goal to tfl
+            self.tcpsenderAppClient(tcp_sender_client_request)
             self.DWACondition[1] = True
             pass
         elif(self.DWACondition[0] and  self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x<-1.1):#减速带前减速

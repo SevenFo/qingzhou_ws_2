@@ -180,6 +180,49 @@ bool TCP_Sender::AppServiceCB(qingzhou_bringup::app::Request &req,qingzhou_bring
         this->_watchRLCond.notify_one();
         return true;
     }
+    if(req.statue == 2)//cancel all goal
+    {
+        this->moveBaseActionClientPtr->cancelAllGoals();
+        ROS_WARN_STREAM_COND(_open_debug, "CANCEL ALL GOAL AT ["<<robotPose.position.x<<","<<robotPose.position.y<<"]");
+        return true;
+    }
+    if(req.statue == 3)//pub goal to tfl but not change location
+    {
+        move_base_msgs::MoveBaseGoal tmp;
+        // move_base_msgs::MoveBaseActionGoal tmpwgoalid;
+        // tmpwgoalid.header.frame_id = "map";
+        // tmpwgoalid.header.stamp = ros::Time::now();
+        // tmpwgoalid.goal_id.id = this->_EmumTranslator(robot_local_state.curruentGoal);
+        // tmpwgoalid.goal_id.stamp = ros::Time::now();
+        tmp.target_pose.header.frame_id = "map";
+        tmp.target_pose.pose.position.x = robot_local_state.goalList[goal_tfl].x;
+        tmp.target_pose.pose.position.y = robot_local_state.goalList[goal_tfl].y;
+        tmp.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robot_local_state.goalList[goal_tfl].z);
+        // tmpwgoalid.goal = tmp;
+        ROS_INFO_STREAM_NAMED("TCP_Sender", "goal setting: "<<this->_EmumTranslator(goal_tfl)<<" and detail:"<<"x:"<<tmp.target_pose.pose.position.x<<" y:"<<tmp.target_pose.pose.position.y<<" z:"<<robot_local_state.goalList[goal_tfl].z<<"qx:"<<tmp.target_pose.pose.orientation.x<<" qy:"<<tmp.target_pose.pose.orientation.y<<" qz"<<tmp.target_pose.pose.orientation.z<<" qw"<<tmp.target_pose.pose.orientation.w);
+        tmp.target_pose.header.stamp = ros::Time::now();
+        this->moveBaseActionClientPtr->sendGoal(tmp);
+        return true;
+    }
+    if(req.statue == 4)//pub goal to curruent goal
+    {
+        move_base_msgs::MoveBaseGoal tmp;
+        // move_base_msgs::MoveBaseActionGoal tmpwgoalid;
+        // tmpwgoalid.header.frame_id = "map";
+        // tmpwgoalid.header.stamp = ros::Time::now();
+        // tmpwgoalid.goal_id.id = this->_EmumTranslator(robot_local_state.curruentGoal);
+        // tmpwgoalid.goal_id.stamp = ros::Time::now();
+        tmp.target_pose.header.frame_id = "map";
+        tmp.target_pose.pose.position.x = robot_local_state.goalList[robot_local_state.curruentGoal].x;
+        tmp.target_pose.pose.position.y = robot_local_state.goalList[robot_local_state.curruentGoal].y;
+        tmp.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(robot_local_state.goalList[robot_local_state.curruentGoal].z);
+        // tmpwgoalid.goal = tmp;
+        ROS_INFO_STREAM_NAMED("TCP_Sender", "goal setting: "<<this->_EmumTranslator(robot_local_state.curruentGoal)<<" and detail:"<<"x:"<<tmp.target_pose.pose.position.x<<" y:"<<tmp.target_pose.pose.position.y<<" z:"<<robot_local_state.goalList[robot_local_state.curruentGoal].z<<"qx:"<<tmp.target_pose.pose.orientation.x<<" qy:"<<tmp.target_pose.pose.orientation.y<<" qz"<<tmp.target_pose.pose.orientation.z<<" qw"<<tmp.target_pose.pose.orientation.w);
+        tmp.target_pose.header.stamp = ros::Time::now();
+        this->moveBaseActionClientPtr->sendGoal(tmp, boost::bind(&TCP_Sender::GoalDoneCB, this, _1, _2), boost::bind(&TCP_Sender::GoalActiveCB, this));
+        return true;
+
+    }
     return false;
 
 
@@ -286,6 +329,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
         ROS_INFO_STREAM_COND(this->_open_debug, "robot pose: x:" << robotPose.position.x << " y:" << robotPose.position.y << " goal_x:" << robot_local_state.goalList[robot_local_state.curruentGoal].x << " goal_y:" << robot_local_state.goalList[robot_local_state.curruentGoal].y);
         if (this->robot_local_state.location != unloadtostart)
             this->ClearCostmapAndWait();
+            
         // haveDetectedTfl = false;
         this->robot_local_state.goalState = reach;
         switch (this->robot_local_state.location)
@@ -295,6 +339,7 @@ void TCP_Sender::GoalDoneCB(const actionlib::SimpleClientGoalState& state, const
             this->UpdateRobotLocation(load);
             break;
             }
+            
         case tfltounload:{this->UpdateRobotLocation(unload);break;}
         case loadtounload:{this->UpdateRobotLocation(unload);break;}
         case unloadtostart:{
@@ -1055,7 +1100,7 @@ void TCP_Sender::UpdateToReachLocation()
 {
     ROS_INFO_STREAM_COND(this->_open_debug, "robot pose: x:" << robotPose.position.x << " y:" << robotPose.position.y << " goal_x:" << robot_local_state.goalList[robot_local_state.curruentGoal].x << " goal_y:" << robot_local_state.goalList[robot_local_state.curruentGoal].y);
     if (this->robot_local_state.location != unloadtostart)
-        this->ClearCostmapAndWait();
+        this->ClearCostmapAndWait();        
     // haveDetectedTfl = false;
     this->robot_local_state.goalState = reach;
     switch (this->robot_local_state.location)
