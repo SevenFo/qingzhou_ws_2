@@ -129,6 +129,7 @@ void InflationLayer::matchSize()
 void InflationLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x,
                                            double* min_y, double* max_x, double* max_y)
 {
+  // ROS_WARN("update infation bounds");
   if (need_reinflation_)
   {
     last_min_x_ = *min_x;

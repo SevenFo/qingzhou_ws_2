@@ -294,7 +294,8 @@ def pianyi_detect(img):
         (x, y, w, h) = cv2.boundingRect(contour1) #用一个最小的矩形，把找到的所有的轮廓包起来，返回轮值x，y是矩阵左上点的坐标，w，h是矩阵的宽和高
         # print(h)
         # ####################1.1 同时检测到蓝白线和蓝线，删选出蓝白线，计算位置########################
-        if w>img_h/3  and con_num >1 : #如果整体轮廓的宽度大于三分之图片的宽度，则说明同时检测到了蓝白线和蓝线 #原来是除以3
+        if w>img_h/3  and con_num > 1 : #如果整体轮廓的宽度大于三分之图片的宽度，则说明同时检测到了蓝白线和蓝线 #原来是除以3
+            # print(con_num)
             mask=np.zeros_like(gray_img) #
             cv2.rectangle(mask, (x, y), (x + 180, y + h-3), (255, 255, 255), cv2.FILLED) #将mask的部分进行白色填充，参数为填充区域的左上角顶将gray_img转化为全是0的矩阵并赋值给mask即全黑点和右下角顶点
             # cv2.imshow('mask',mask) #进行填充后的mask的图像
@@ -310,18 +311,23 @@ def pianyi_detect(img):
                         contour2.append(contours1[c1][c2])
                 contour2 = np.array(contour2) #将蓝白线的轮廓信息存于contour2矩阵中
                 (x1, y1, w1, h1) = cv2.boundingRect(contour2) #蓝白线的轮廓信息
-                cv2.rectangle(img, (x1, y1), (x1 + w1, img_h), (255, 255, 255), 3)#白框-----同时检测到蓝线和蓝白线给蓝白线画白框——永远贴着底画矩形框
-                pianyi=((x1+w1/2)-(img_h/2))*FOV_w/img_h #pianyi值为矩形方框的中线距离视野中央的实际距离
-                if pianyi>0:
-                    #print('右偏')
-                    pianyi_text='right'
-                elif pianyi<0:
-                    #print('左偏')
+                if con_num > 2 : #右边的蓝线有时会看不清，断成两节
+                    cv2.rectangle(img, (x1, y1), (x1 + w1, img_h), (255, 255, 255), 3)#白框-----同时检测到蓝线和蓝白线给蓝白线画白框——永远贴着底画矩形框
+                    pianyi=((x1+w1/2)-(img_h/2))*FOV_w/img_h #pianyi值为矩形方框的中线距离视野中央的实际距离
+                    if pianyi>0:
+                        #print('右偏')
+                        pianyi_text='right'
+                    elif pianyi<0:
+                        #print('左偏')
+                        pianyi_text='left'
+                    else:
+                        # print('左偏')
+                        pianyi_text = 'stright'
+                    #print(pianyi)
+                else : #这个时候才是真正的蓝线
+                    cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3) #蓝框-----------------只检测到蓝线并用蓝框画出
+                    pianyi = 80-((x + w / 2) - (img_h / 2)) * FOV_w / img_h #80凑数,为了让车不开出赛道去
                     pianyi_text='left'
-                else:
-                    # print('左偏')
-                    pianyi_text = 'stright'
-                #print(pianyi)
 
             #########################1.2 只检测到一条线，需要判断是蓝白线还是蓝线##############
         elif w<img_h/3  :
@@ -422,10 +428,10 @@ def pianyi_detect(img):
 
     # print("second {}".format(pianyi_now))   
     if pianyi_text == 'right' :
-        pianyi_now = 0 - pianyi_now-12#这个数要试 #10
+        pianyi_now = 0 - pianyi_now-14#这个数要试 #12
         # print("third {}".format(pianyi_now))   
     elif  pianyi_text == 'left' :
-        pianyi_now =  pianyi_now+9 #这个数要试 #6
+        pianyi_now =  pianyi_now+8 #这个数要试 #6
         # print("third {}".format(pianyi_now))   
     # print(nothing_point) #打印出有没有左下角点的干扰
     # if(abs(pianyi - pianyi_befor) > 30) or pianyi_befor == -pianyi_now  or nothing_point ==1: #去除剧烈跳变和检测到左下角点
@@ -492,6 +498,8 @@ if __name__ == '__main__':
 
     tcp_server_thread = None
 
+    rate = rospy.Rate(100)
+
     try:
 
         # server = Server()
@@ -504,6 +512,7 @@ if __name__ == '__main__':
         rospy.loginfo("detector node is started...")
         while not rospy.is_shutdown():
             # time1 = time.time()
+            rate.sleep()
             ret, Img = Video.read()
             # print(Img.shape)
             # time2 = time.time()
@@ -577,7 +586,7 @@ if __name__ == '__main__':
                     # print("****************stop****************")
                     cmdData.linear.x = 1.2+acc*(time.time()-startT)  #1.2
                     print("now speed:{}".format(cmdData.linear.x))
-                    cmdData.angular.z = -1.6 #-1.3
+                    cmdData.angular.z = -1.4 #-1.3
                     cmdpub.publish(cmdData)
 
                 pianyibefore = pianyi
@@ -598,15 +607,15 @@ if __name__ == '__main__':
                     data.y = pianyi
                     vision.publish(data)
         
-        rospy.loginfo("killing tcp server")
-        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tcp_server_thread.ident),ctypes.py_object(SystemExit))
-        if(res == 0):
-            rospy.loginfo("invaild thread id")
-        elif(res>1):
-            rospy.loginfo("kill failed, try again")
-            ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tcp_server_thread.ident),None)
-        else:
-            rospy.loginfo("killed tcp server")
+        # rospy.loginfo("killing tcp server")
+        # res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tcp_server_thread.ident),ctypes.py_object(SystemExit))
+        # if(res == 0):
+        #     rospy.loginfo("invaild thread id")
+        # elif(res>1):
+        #     rospy.loginfo("kill failed, try again")
+        #     ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tcp_server_thread.ident),None)
+        # else:
+        #     rospy.loginfo("killed tcp server")
                     
 
     except rospy.ROSInterruptException:

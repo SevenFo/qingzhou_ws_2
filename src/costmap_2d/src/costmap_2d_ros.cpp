@@ -447,10 +447,11 @@ void Costmap2DROS::mapUpdateLoop(double frequency)
     double start_t, end_t, t_diff;
     gettimeofday(&start, NULL);
     #endif
-    
+    // ROS_WARN("UPDATE MAP BEGIN");
     updateMap();
+    // ROS_WARN("UPDATE MAP OVER");
 
-    #ifdef HAVE_SYS_TIME_H
+#ifdef HAVE_SYS_TIME_H
     gettimeofday(&end, NULL);
     start_t = start.tv_sec + double(start.tv_usec) / 1e6;
     end_t = end.tv_sec + double(end.tv_usec) / 1e6;

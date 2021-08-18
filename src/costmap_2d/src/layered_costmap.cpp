@@ -115,7 +115,8 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
        ++plugin)
   {
-    if(!(*plugin)->isEnabled())
+    // ROS_WARN_STREAM("plugin is enable?  " << (*plugin)->isEnabled());
+    if (!(*plugin)->isEnabled())
       continue;
     double prev_minx = minx_;
     double prev_miny = miny_;

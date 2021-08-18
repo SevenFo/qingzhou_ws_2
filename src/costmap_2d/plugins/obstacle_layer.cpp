@@ -219,6 +219,8 @@ void ObstacleLayer::onInitialize()
 
   dsrv_ = NULL;
   setupDynamicReconfigure(nh);
+  ROS_WARN("cqu inflation inited");
+
 }
 
 void ObstacleLayer::setupDynamicReconfigure(ros::NodeHandle& nh)
@@ -333,6 +335,7 @@ void ObstacleLayer::pointCloud2Callback(const sensor_msgs::PointCloud2ConstPtr& 
 void ObstacleLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x,
                                           double* min_y, double* max_x, double* max_y)
 {
+      // ROS_WARN("cqu obstacal updatebounds");
   if (rolling_window_)
     updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
   useExtraBounds(min_x, min_y, max_x, max_y);

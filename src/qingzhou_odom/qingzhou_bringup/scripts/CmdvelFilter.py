@@ -21,9 +21,10 @@ class CmdvelFilter(object):
         self.is_pub_cmd = False
         self.is_open_cmd = True
         self.is_angular_limit = False
+        self.is_not_angular_boost = False
+        self.load_angular_boost = False
 
         self.cmd_data_before = Twist()
-
         self.cmd_data_to_pub = Twist()
 
 
@@ -39,12 +40,25 @@ class CmdvelFilter(object):
             self.is_angular_limit = False
         elif (req.statue == 3):# 角速度限制
             self.is_angular_limit = True
+        elif(req.statue == 4):
+            self.is_not_angular_boost =True
+        elif(req.statue == 5):
+            self.is_not_angular_boost = False
+            self.load_angular_boost = False
+        elif(req.statue == 6):
+            self.load_angular_boost = True
         return 0
 
     
     def cmdvel_sub_cb(self,data):
         self.cmd_data = data
-        self.cmd_data.angular.z *= 1.1
+        if(not self.is_not_angular_boost):
+            self.cmd_data.angular.z *= 1.2 
+        else:
+            self.cmd_data.angular.z *= 1.1
+        if(self.load_angular_boost):
+            self.cmd_data.angular.z *= 1.0
+
         # print(self.cmd_data)
         self.is_pub_cmd = True
         pass
@@ -70,6 +84,13 @@ class CmdvelFilter(object):
             self.cmd_puber.publish(self.cmd_data_to_pub)
             self.cmd_data_before = self.cmd_data # 记录上一次的速度值
             # self.is_pub_cmd = False
+            if(self.cmd_data_to_pub.angular.z - self.cmd_data.angular.z >0.2 or self.cmd_data_to_pub.angular.z - self.cmd_data.angular.z <-0.25):
+                rospy.logwarn("注意角速度变化过大")
+                self.cmd_data_to_pub.angular.z = self.cmd_data_to_pub.angular.z + (self.cmd_data.angular.z - self.cmd_data_to_pub.angular.z)*0.3
+                rospy.loginfo("{} -> {}".format(self.cmd_data.angular.z,self.cmd_data_to_pub.angular.z))
+            else:
+                self.cmd_data_to_pub = self.cmd_data
+
         pass
 
     def run(self):

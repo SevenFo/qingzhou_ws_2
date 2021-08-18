@@ -38,7 +38,7 @@ class DynamicParamsClient():
         
         self.turnTimer = rospy.Timer(rospy.Duration(1.0), self.turn_timer_callback)
         
-        self.normal = {"min_vel_x":0.4,"max_vel_x":1.0,"min_vel_theta":0.1,"max_vel_theta":1.0}
+        self.normal = {"min_vel_x":0.5  ,"max_vel_x":1.0,"min_vel_theta":0.1,"max_vel_theta":1.0}
 
         # self.turnTimer.
 
@@ -57,8 +57,8 @@ class DynamicParamsClient():
         rospy.loginfo("set up dpc")
 
     def srvCallback(self,req):
-        self.DWACondition[0] = False
-        self.DWACondition[1] = False
+        # self.DWACondition[0] = False
+        # self.DWACondition[1] = False
         if(req.statue == 1):
             self.DWACondition[0] = False
             self.DWACondition[1] = False
@@ -106,28 +106,39 @@ class DynamicParamsClient():
         self.goalStatus = GoalStatus
 
     def loadtounload(self):
-        if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2]):# 到达起始区区域的时候向前开一点距离
+        if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x>1.93 and self.pose.position.y >-3.85):# 到达起始区区域的时候向前开一点距离
 
-            self.log("","[loadtounload]: pub goal to tfl") 
-            tcp_sender_client_request = app._request_class()
-            tcp_sender_client_request.statue = 3 #pub goal to tfl
-            self.tcpsenderAppClient(tcp_sender_client_request)
-            self.DWACondition[0] = True
-        elif(self.DWACondition[0] and (not self.DWACondition[1]) and (not self.DWACondition[2]) and (self.pose.position.y < -3.5)):
+            self.log("","[loadtounload]: stop cmd control and move forward a little")
+            self.cmd_filter_client(1) 
+            cmd_data = Twist()
+            cmd_data.linear.x = 0.8
+            cmd_data.angular.z = (-95 - self.yaw)/180*3.14*2.0
+            self.log("","[oritation:{} add {}]".format(self.yaw,(cmd_data.angular.z/3.14*180)))
+            self.cmdPuber.publish(cmd_data)
+            self.DWACondition[0] = True     
+        elif(self.DWACondition[0] and (not self.DWACondition[1]) and (not self.DWACondition[2]) and (self.pose.position.y < -3.85)):
             # 恢复cmd控制
-            self.log("","[loadtounload]:pub goal to unload (maybe)")
-            tcp_sender_client_request = app._request_class()
-            tcp_sender_client_request.statue = 4 #pub goal to tfl
-            self.tcpsenderAppClient(tcp_sender_client_request)
+            self.log("","[loadtounload]: recovery cmd control")
+            self.cmd_filter_client(2)
             self.DWACondition[1] = True
             pass
-        elif(self.DWACondition[0] and  self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x<-1.1):#减速带前减速
-            self.DWAClient.update_configuration({"max_vel_x":0.8})
+        elif(self.DWACondition[0] and  self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x<-0.7):#减速带前减速
+            self.DWAClient.update_configuration({"max_vel_x":0.6})
             self.log("","[loadtounload]: set max_vel_x 0.8")
+            # if(abs(self.yaw - 90)<5):
+            #     self.log("","[loadtounload]: stop cmd control and move forward a little")
+            #     self.cmd_filter_client(1) 
+            #     cmd_data = Twist()
+            #     cmd_data.linear.x = 0.8
+            #     # cmd_data.angular.z = (-95 - self.yaw)/180*3.14*2.0
+            #     self.log("","[oritation:{} add {}]".format(self.yaw,(cmd_data.angular.z/3.14*180)))
+            #     self.cmdPuber.publish(cmd_data)
             self.DWACondition[2] = True
-        elif(self.DWACondition[0] and self.DWACondition[1] and self.DWACondition[2] and self.pose.position.y >-7.0): #恢复配置
+        elif(self.DWACondition[0] and self.DWACondition[1] and self.DWACondition[2] and self.pose.position.y >-6.6): #恢复配置
             self.DWAClient.update_configuration(self.normal)
             self.log("","[loadtounload]: RESET CONFIG")
+            self.log("","[loadtounload]: recovery cmd control [{},{},{}]".format(self.pose.position.x,self.pose.position.y,self.yaw))
+            self.cmd_filter_client(2)
             self.DWACondition = [False,False,False]
             self.openLoadToUnload = False
 
@@ -136,20 +147,24 @@ class DynamicParamsClient():
         if(not self.DWACondition[0] and not self.DWACondition[1]):#进入装货区前减速
 
             # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
-            self.DWAClient.update_configuration({"min_vel_x":1.1,"max_vel_x":1.1,"max_vel_theta":1.0,"min_vel_theta":0.3})
+            self.DWAClient.update_configuration({"min_vel_x":1.1,"max_vel_x":1.1,"max_vel_theta":1.1,"min_vel_theta":0.3})
             self.log("","[starttoload]: set min_vel_x 1.2 max_vel_x:1.2 max_vel_theta:1.1 min_vel_theta:0.3")
+            self.cmd_filter_client(6) # change angular boost to 1.2
             self.DWACondition[0] = True
-        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y<-3.0): #恢复配置
+
+        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y<-2.4): #恢复配置
             self.DWAClient.update_configuration(self.normal)
             self.log("","[starttoload]: RESET CONFIG")
             self.DWACondition = [False,False,False]
-
+            self.cmd_filter_client(5) # change angcmd_filter_client
             self.openStartToLoad = False
 
     
 
     def unloadtorlstart(self):
         if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2]):
+            # 关闭角度增益
+            self.cmd_filter_client(4)
             # 提高速度
             self.DWAConfig = self.DWAClient.get_configuration()#保存旧的配置
             # self.log("DWAParamCallback","old min_vel_x:{}".format(self.DWAConfig["min_vel_x"]))
@@ -169,6 +184,8 @@ class DynamicParamsClient():
         elif(self.DWACondition[1] and self.DWACondition[0] and self.pose.position.y > -3.8):
             self.DWAClient.update_configuration(self.normal)
             self.log("","[unloadtorlstart]: RESET CONFIG")
+            # 开启角度增益
+            self.cmd_filter_client(5)
             self.DWACondition = [False,False,False]
             self.openUnloadToRLstart = False
 

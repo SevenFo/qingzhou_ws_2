@@ -3,6 +3,7 @@ local_costmap:
   plugins:
     - {name: obstacle_layer, type: "costmap_2d::ObstacleLayer"}
     - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
+    # - {name: cqu_layer, type: "costmap_2d::CQULayer"}
   global_frame: odom
   robot_base_frame: base_link
   transform_tolerance: 0.5 #default 0.2s
@@ -19,8 +20,8 @@ local_costmap:
 
   # The following parameters can be overwritten by some layers, namely the static map layer.
   # 下面的参数会被静态地图层重写
-  width: 7.0
-  height: 7.0 
+  width: 5.0
+  height: 5.0
   resolution: 0.05
   origin_x: 0.0
   origin_y: 0.0

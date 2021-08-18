@@ -105,6 +105,7 @@ add_library(layers
   plugins/obstacle_layer.cpp
   plugins/static_layer.cpp
   plugins/voxel_layer.cpp
+  plugins/cqu_layer.cpp
   src/observation_buffer.cpp
 )
 add_dependencies(layers ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -135,6 +136,15 @@ target_link_libraries(costmap_2d_node
     ${Boost_LIBRARIES}
     ${catkin_LIBRARIES}
 )
+
+# add_library(cqu_layer src/cqu_layer.cpp)
+
+# add_dependencies(cqu_layer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# target_link_libraries(cqu_layer
+#   costmap_2d
+#   ${catkin_LIBRARIES}
+# )
 
 ## Configure Tests
 if(CATKIN_ENABLE_TESTING)

@@ -45,6 +45,7 @@
 #include <geometry_msgs/Twist.h>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <time.h>
 
 namespace move_base {
 
@@ -802,7 +803,11 @@ namespace move_base {
       ros::WallTime start = ros::WallTime::now();
 
       //the real work on pursuing a goal is done here
+      auto startTime = clock();
       bool done = executeCycle(goal);
+      
+      auto endTime = clock();
+      ROS_WARN_STREAM("executeCycle:" << endTime - startTime);
 
       //if we're done, then we'll return from execute
       if(done)
@@ -816,7 +821,7 @@ namespace move_base {
       r.sleep();
       //make sure to sleep for the remainder of our cycle time
       if(r.cycleTime() > ros::Duration(1 / controller_frequency_) && state_ == CONTROLLING)
-        ROS_WARN_ONCE("Control loop missed its desired rate of %.4fHz... the loop actually took %.4f seconds", controller_frequency_, r.cycleTime().toSec());
+        ROS_WARN("Control loop missed its desired rate of %.4fHz... the loop actually took %.4f seconds", controller_frequency_, r.cycleTime().toSec());
     }
 
     //wake up the planner thread so that it can exit cleanly

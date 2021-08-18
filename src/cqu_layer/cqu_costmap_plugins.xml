@@ -1,5 +1,5 @@
 <library path="lib/libcqu_layer">
-  <class type="cqu_costmap::CQULayer" base_class_type="costmap_2d::Layer">
+  <class name="cqu_layer" type="cqu_costmap::CQULayer" base_class_type="costmap_2d::Layer">
     <description>cqu layer costmap</description>
   </class>
 </library>

@@ -9,8 +9,24 @@ project(cqu_layer)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   costmap_2d
+  cmake_modules
   dynamic_reconfigure
+  geometry_msgs
+  laser_geometry
+  map_msgs
+  message_filters
+  message_generation
+  nav_msgs
+  pluginlib
   roscpp
+  sensor_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  tf2_ros
+  tf2_sensor_msgs
+  visualization_msgs
+  voxel_grid
 )
 
 ## System dependencies are found with CMake's conventions
@@ -123,6 +139,11 @@ include_directories(
 ## Declare a C++ library
 add_library(cqu_layer src/cqu_layer.cpp)
 
+add_dependencies(cqu_layer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(cqu_layer
+  ${catkin_LIBRARIES}
+)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure

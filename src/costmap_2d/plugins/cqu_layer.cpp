@@ -1,7 +1,7 @@
-#include <cqu_layer/cqu_layer.h>
+#include <costmap_2d/cqu_layer.h>
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(cqu_costmap::CQULayer, costmap_2d::Layer)
-namespace cqu_costmap
+PLUGINLIB_EXPORT_CLASS(costmap_2d::CQULayer, costmap_2d::Layer)
+namespace costmap_2d
 {
 CQULayer::CQULayer()
 {
@@ -39,29 +39,36 @@ void CQULayer::onInitialize()
 
     lethal_threshold_ = std::max(std::min(temp_lethal_threshold, 100), 0);
     unknown_cost_value_ = temp_unknown_cost_value;
+    enabled_ = true;
     ROS_WARN("cqu layer inited");
 }
 void CQULayer::matchSize()
 {
+    ROS_WARN("cqu layer match size");
     Costmap2D* master = layered_costmap_->getCostmap();
     resizeMap(master->getSizeInCellsX(), master->getSizeInCellsY(), master->getResolution(),
               master->getOriginX(), master->getOriginY());
 }
 void CQULayer::activate()
 {
+        ROS_WARN("cqu layer activate");
+
   onInitialize();
 }
 //更新 要更新的范围
 void CQULayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
                                         double* max_x, double* max_y)
 {
-
+    
+    ROS_WARN("cqu layer update bounds");
     ROS_INFO_NAMED("cqu_costmap", "CQUCOSTMAP:costmap call me to update bounds, but I dont");
     ROS_INFO_STREAM("[update bounds] robot_x:" << robot_x << " robot_y:" << robot_y << " robot_yaw:" << robot_yaw << " min_x:" << *min_x << " mixy:" << *min_y << " max_x:" << *max_x << " max_y:" << *max_y);
     return;
 }
 void CQULayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j)
 {
+    ROS_WARN("cqu layer update costs");
+
     ROS_INFO_STREAM_NAMED("cqu_costmap", "CQUCOSTMAP: UPDATE CPSTS min_i:"<<min_i<<" min_j:"<<min_j<<" maxi:"<<max_i<<" maxj:"<<max_j);
     unsigned int mapstartx, mapstarty,mapendx,mapendy;
     this->worldToMap(startpointx, startpointy,mapstartx, mapstarty);
@@ -86,4 +93,11 @@ void CQULayer::CalculateLine(const int &map_start_point_x, const int &map_start_
         master_grid.setCost(i, k * i + b, costmap_2d::LETHAL_OBSTACLE);
     }
 }
+void CQULayer::deactivate()
+{
+    ROS_WARN("cqu layer deactivate");
+
+    std::cout << "deactivate" << std::endl;
 }
+}
+
