@@ -7,6 +7,7 @@ from dynamic_reconfigure import client
 from geometry_msgs.msg import Pose
 from actionlib_msgs.msg import GoalStatus
 from geometry_msgs.msg import Twist
+from std_srvs.srv import Empty
 import tf
 from qingzhou_bringup.srv import app
 
@@ -27,6 +28,7 @@ class DynamicParamsClient():
         rospy.wait_for_service("/move_base/DWAPlannerROS/set_parameters",timeout=100)
         rospy.wait_for_service("/TCP_Sender/app",timeout = 100)
         rospy.wait_for_service("/cmdvel_filter_client",timeout = 100)
+        rospy.wait_for_service("/move_base/clear_costmaps",timeout = 100)
  
         self.debug = True
         self.DWAClient = client.Client("/move_base/DWAPlannerROS",0.2,self.DWAParamsChangedCallback)
@@ -35,6 +37,7 @@ class DynamicParamsClient():
         self.cmdPuber = rospy.Publisher("/cmd_vel_filted",Twist,queue_size=3)
         self.tcpsenderAppClient = rospy.ServiceProxy("/TCP_Sender/app",app)
         self.cmd_filter_client = rospy.ServiceProxy("/cmdvel_filter_client",app)
+        self.clearcostmap_client = rospy.ServiceProxy("/move_base/clear_costmaps",Empty)
         
         self.turnTimer = rospy.Timer(rospy.Duration(1.0), self.turn_timer_callback)
         
@@ -106,25 +109,28 @@ class DynamicParamsClient():
         self.goalStatus = GoalStatus
 
     def loadtounload(self):
-        if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x>1.93 and self.pose.position.y >-3.85):# 到达起始区区域的时候向前开一点距离
-
-            self.log("","[loadtounload]: stop cmd control and move forward a little")
-            self.cmd_filter_client(1) 
-            cmd_data = Twist()
-            cmd_data.linear.x = 0.8
-            cmd_data.angular.z = (-95 - self.yaw)/180*3.14*2.0
-            self.log("","[oritation:{} add {}]".format(self.yaw,(cmd_data.angular.z/3.14*180)))
-            self.cmdPuber.publish(cmd_data)
-            self.DWACondition[0] = True     
-        elif(self.DWACondition[0] and (not self.DWACondition[1]) and (not self.DWACondition[2]) and (self.pose.position.y < -3.85)):
-            # 恢复cmd控制
-            self.log("","[loadtounload]: recovery cmd control")
-            self.cmd_filter_client(2)
-            self.DWACondition[1] = True
-            pass
-        elif(self.DWACondition[0] and  self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x<-0.7):#减速带前减速
-            self.DWAClient.update_configuration({"max_vel_x":0.6})
-            self.log("","[loadtounload]: set max_vel_x 0.8")
+        if(not self.DWACondition[0] and not self.DWACondition[1] and not self.DWACondition[2]):# 到达起始区区域的时候向前开一点距离
+            if(self.pose.position.y >-3.85 ):
+                self.log("","[loadtounload]: stop cmd control and move forward a little")
+                self.cmd_filter_client(1) 
+                cmd_data = Twist()
+                cmd_data.linear.x = 0.8
+                cmd_data.angular.z = (-95 - self.yaw)/180*3.14*1.8
+                self.log("","[oritation:{} add {}]".format(self.yaw,(cmd_data.angular.z/3.14*180)))
+                self.cmdPuber.publish(cmd_data)
+            else:
+                # 恢复cmd控制
+                self.log("","[loadtounload]: recovery cmd control")
+                self.cmd_filter_client(2)
+                # self.cmd_filter_client(8) #set linear p to 0.15
+                self.DWACondition[0] = True  
+        elif(self.DWACondition[0] and (not self.DWACondition[1]) and (not self.DWACondition[2]) and (self.pose.position.x < 0.3)):#减速带前减速
+            # self.DWAClient.update_configuration({"max_vel_x":0.8})
+            self.log("","[loadtounload]: set max_vel_x 0.8")   
+            self.DWACondition[1] = True  
+        elif(self.DWACondition[0] and  self.DWACondition[1] and not self.DWACondition[2] and self.pose.position.x<-0.7):#减速带后减速
+            # self.DWAClient.update_configuration({"max_vel_x":0.6})
+            self.log("","[loadtounload]: set max_vel_x 0.6")
             # if(abs(self.yaw - 90)<5):
             #     self.log("","[loadtounload]: stop cmd control and move forward a little")
             #     self.cmd_filter_client(1) 
@@ -134,11 +140,13 @@ class DynamicParamsClient():
             #     self.log("","[oritation:{} add {}]".format(self.yaw,(cmd_data.angular.z/3.14*180)))
             #     self.cmdPuber.publish(cmd_data)
             self.DWACondition[2] = True
-        elif(self.DWACondition[0] and self.DWACondition[1] and self.DWACondition[2] and self.pose.position.y >-6.6): #恢复配置
+        elif(self.DWACondition[0] and self.DWACondition[1] and self.DWACondition[2] and self.pose.position.y >-6.8): #恢复配置
             self.DWAClient.update_configuration(self.normal)
             self.log("","[loadtounload]: RESET CONFIG")
             self.log("","[loadtounload]: recovery cmd control [{},{},{}]".format(self.pose.position.x,self.pose.position.y,self.yaw))
             self.cmd_filter_client(2)
+            clearcostmap_req = Empty._request_class()
+            self.clearcostmap_client(clearcostmap_req)
             self.DWACondition = [False,False,False]
             self.openLoadToUnload = False
 
@@ -152,11 +160,12 @@ class DynamicParamsClient():
             self.cmd_filter_client(6) # change angular boost to 1.2
             self.DWACondition[0] = True
 
-        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y<-2.4): #恢复配置
+        if(self.DWACondition[0] and not self.DWACondition[1] and self.pose.position.y<-1.6): #恢复配置
             self.DWAClient.update_configuration(self.normal)
             self.log("","[starttoload]: RESET CONFIG")
             self.DWACondition = [False,False,False]
             self.cmd_filter_client(5) # change angcmd_filter_client
+            # self.cmd_filter_client(7) # change linear p to 0.4
             self.openStartToLoad = False
 
     

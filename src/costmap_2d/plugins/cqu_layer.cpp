@@ -67,15 +67,14 @@ void CQULayer::updateBounds(double robot_x, double robot_y, double robot_yaw, do
 }
 void CQULayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j)
 {
-    ROS_WARN("cqu layer update costs");
-
-    ROS_INFO_STREAM_NAMED("cqu_costmap", "CQUCOSTMAP: UPDATE CPSTS min_i:"<<min_i<<" min_j:"<<min_j<<" maxi:"<<max_i<<" maxj:"<<max_j);
+    ROS_INFO_STREAM_NAMED("cqu_costmap", "CQUCOSTMAP: UPDATE COSTS min_i:"<<min_i<<" min_j:"<<min_j<<" maxi:"<<max_i<<" maxj:"<<max_j);
     unsigned int mapstartx, mapstarty,mapendx,mapendy;
     this->worldToMap(startpointx, startpointy,mapstartx, mapstarty);
     this->worldToMap(endpointx, endpointy,mapendx, mapendy);
-    ROS_INFO_STREAM_NAMED("cqu_costmap", "CQUCOSTMAP: UPDATE CPSTS map_start_x:" << mapstartx << " map_start_y:" << mapstarty << " map_end_x:" << mapendx << " map_end_y:" << mapendy);
+    ROS_INFO_STREAM("WORLD TO MAP TEST world x:" << startpointx << " >> " << mapstartx << " y" << startpointy << " >> " << mapstarty);
+    // ROS_INFO_STREAM_NAMED("cqu_costmap", "CQUCOSTMAP: UPDATE COSTS map_start_x:" << mapstartx << " map_start_y:" << mapstarty << " map_end_x:" << mapendx << " map_end_y:" << mapendy);
     // CalculateLine(mapstartx, mapstarty, mapendx, mapendy, master_grid);
-
+    
     return;
 }
 void CQULayer::reset()

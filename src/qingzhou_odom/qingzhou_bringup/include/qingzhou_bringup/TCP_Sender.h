@@ -59,7 +59,8 @@ enum ROBOTGOALPOINT
     goal_load,
     goal_tfl,
     goal_unload,
-    goal_roadlinestart
+    goal_roadlinestart,
+    goal_unkonw
 };
 
 

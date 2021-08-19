@@ -1,5 +1,7 @@
 #include "TCP_Sender.h"
 #include "math.h"
+#include <chrono>
+#include <thread>
 
 TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 {
@@ -14,8 +16,8 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 
     _redStartTime = ros::Time(0);
     //订阅
-    bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",5,&TCP_Sender::SubBettaryInfoCB,this);//电池电量
-    speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel_filted",50,&TCP_Sender::SubSpeedCB,this);//速度
+    bettarySuber = nh.subscribe<std_msgs::Float32>("/battery",2,&TCP_Sender::SubBettaryInfoCB,this);//电池电量
+    speedSuber = nh.subscribe<geometry_msgs::Twist>("/cmd_vel_filted",5,&TCP_Sender::SubSpeedCB,this);//速度
     trafficLightSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubTrafficLightCB,this);//红绿灯
     pianyiSuber = nh.subscribe<geometry_msgs::Vector3>("/pianyi",1,&TCP_Sender::SubLineCB,this);
     //service client
@@ -27,8 +29,8 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
     //service server
     appServiceServer = nh.advertiseService("/TCP_Sender/app",&TCP_Sender::AppServiceCB,this);
     //Publisher
-    cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",50);
-    cmdvelfiltedPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel_filted",50);
+    cmdvelPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel",1);
+    cmdvelfiltedPuber = nh.advertise<geometry_msgs::Twist>("/cmd_vel_filted",1);
     _goalStatusPuber = nh.advertise<actionlib_msgs::GoalStatus>("/TCP_Sender/GoalStatus", 1);
     _locationInMapPuber = nh.advertise<geometry_msgs::Pose>("/TCP_Sender/PoseInMap", 2);
     _initialposePuber = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1);
@@ -46,7 +48,7 @@ TCP_Sender::TCP_Sender(const ros::NodeHandle &nodeHandler)
 
     //Thread
     this->_tfListenThread = new boost::thread(boost::bind(&TCP_Sender::ListenRobotPose, this,boost::ref(this->robotPose))); //开启监听pose的线程
-    this->_watchRLStart = new boost::thread(boost::bind(&TCP_Sender::WatchRLStartAndCancleGoal, this, this->moveBaseActionClientPtr,&this->cmdvelPuber));
+    this->_watchRLStart = new boost::thread(boost::bind(&TCP_Sender::WatchRLStartAndCancleGoal, this, this->moveBaseActionClientPtr,&this->cmdvelfiltedPuber));
     
     robot_local_state = rls();
 
@@ -257,11 +259,12 @@ void TCP_Sender::SubTrafficLightCB(const geometry_msgs::Vector3::ConstPtr &msg)
     {
         ROS_INFO_STREAM("det red");
 
+
         this->haveDetectedRedTfl = true;//不要频繁发布目标点
         haveDetectedGreenTfl = false;
         this->UpdateRobotLocation(loadingtotfl);
         this->UpdateRobotCurruentGoal(goal_tfl);
-        this->robot_local_state.goalState = active;
+        // this->robot_local_state.goalState = active;
         this->ExecGoal();
     }
     //检测到绿灯 或者 停车时间超过6s
@@ -406,7 +409,6 @@ bool TCP_Sender::SendRobotStatusInfo()//发送机器人当前的状态
 
 void TCP_Sender::ClearCostmapFirstly() {
     std_srvs::Empty req;
-    clearCostmapFirstlyClient.waitForExistence();
     if (clearCostmapFirstlyClient.call(req))
     {
         ROS_INFO_NAMED("TCP_Sender", "Clear Costmap success!");
@@ -765,10 +767,10 @@ void TCP_Sender::RunGoal_v2()
         {
             //todo
             //如果到达停止线说明现在一定是红灯，没有别的情况会这样了
-            ROS_INFO_NAMED("TCP_Sender", "robot have reached tfl，waiting green...");
+            // ROS_INFO_NAMED("TCP_Sender", "robot have reached tfl，waiting green...");
             _redStartTime = ros::Time::now(); //
             
-            this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
+            // this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
             break;
         }
         case unload:
@@ -803,14 +805,18 @@ void TCP_Sender::RunGoal_v2()
         {
             //开启车道线探测
             this->OpenRLDet();//顺便改状态
-            this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
+            // this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
             break;
         }
         //todo...............
         case roadline:
         {
-            ROS_INFO_NAMED("TCP_Sender", "robot is controlled by vision...");
-            this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
+            if(isFirstRun)
+            {
+                ROS_INFO_NAMED("TCP_Sender", "robot is controlled by vision...");
+                isFirstRun = true;
+            }
+            // this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
             //视觉接管控制
             break;
         }
@@ -820,6 +826,7 @@ void TCP_Sender::RunGoal_v2()
             this->UpdateRobotLocation(unloadtostart);
             this->UpdateRobotCurruentGoal(goal_start);
             this->ExecGoal();
+            isFirstRun = false;
 
             this->robot_local_state.goalState = active;//reach状态只能进入一次（每次goalreach）
             // this->ExecGoal();
@@ -852,12 +859,26 @@ void TCP_Sender::RunGoal_v2()
         //正在执行goal
         //检测机器人的位置，当他到达goal的时候如果没有reach手动reach
         auto goalPose = robot_local_state.goalList[robot_local_state.curruentGoal];
-        if (abs(this->robotPose.position.x - goalPose.x) < 0.2 && abs(this->robotPose.position.y - goalPose.y)<0.2||(robot_local_state.curruentGoal == goal_load && this->robotPose.position.y < goalPose.y-0.2)||(robot_local_state.curruentGoal == goal_unload && robotPose.position.y > goalPose.y +0.2 && robotPose.position.x < -1.0)||(robot_local_state.curruentGoal == goal_start && robotPose.position.x > goalPose.x +0.2))
+        if ((abs(this->robotPose.position.x - goalPose.x) < 0.2 && abs(this->robotPose.position.y - goalPose.y)<0.2||(robot_local_state.curruentGoal == goal_load && this->robotPose.position.y < goalPose.y+0.2 && robotPose.position.x > goalPose.x -1.0)||(robot_local_state.curruentGoal == goal_unload && robotPose.position.y > goalPose.y && robotPose.position.x < -1.0)||(robot_local_state.curruentGoal == goal_start && robotPose.position.x > goalPose.x +0.2 && robotPose.position.y > -0.6)))
         {
             ROS_WARN_STREAM_COND(_open_debug, "robot may have reach goal but move base DO NOT cancel goal, canceling manually...@["<<robotPose.position.x<<","<<robotPose.position.y<<"]");
-            moveBaseActionClientPtr->cancelAllGoals();
-            // this->robot_local_state.goalState = reach;
-            UpdateToReachLocation();//相当与之前个的goaldone callback中的success部分
+            if(robot_local_state.location != unloadtoroadline)
+            {
+                
+                    // auto cmdData = geometry_msgs::Twist();
+                    // cmdData.linear.x = 0;
+                    // cmdvelPuber.publish(cmdData);
+                    // cmdvelfiltedPuber.publish(cmdData);
+                    // ROS_WARN_STREAM("STOPING: " << robotStatusMsg.linearSpeed);
+                
+                moveBaseActionClientPtr->cancelAllGoals();
+                // this->robot_local_state.goalState = reach;
+                UpdateToReachLocation();//相当与之前个的goaldone callback中的success部分
+            }
+            else
+            {
+                ROS_WARN_COND(_open_debug, "location is unloadtoroadline: NOT UPDATE REACH LOCATION (and not cancel costmap)");
+            }
         }
         //当机器人开出去车道线但一直无法停下来，可能会一直处于active的状态，需要进行处理
     }
@@ -885,14 +906,36 @@ void TCP_Sender::RunGoal_v2()
 
 bool TCP_Sender::ClearCostmapAndWait()
 {
+    // auto cmdData = geometry_msgs::Twist();
+    // cmdData.linear.x = 0;
+    // cmdvelfiltedPuber.publish(cmdData);
+    
     std_srvs::Empty req;
     if (clearCostmapClient.call(req)) {
         ROS_INFO_NAMED("TCP_Sender", "clear costmap success!");
         //在转角的时候路径规划没有考虑障碍物？
-        ROS_INFO_NAMED("TCP_Sender", "Sleep 1.3s wating costmap)");
-        sleepDur = ros::Duration(1.0);
-        sleepDur.sleep();
-        ROS_INFO_NAMED("TCP_Sender", "weak up");
+        auto req=  qingzhou_bringup::app();
+        req.request.statue = 1;
+        
+        if(cmdvelFilterClient.call(req))
+        {
+            sleepDur = ros::Duration(0.05);
+            auto cmdData = geometry_msgs::Twist();
+            cmdData.linear.x = 0;
+            for (int i = 0; i < 20;i++)
+            {
+                
+                cmdvelfiltedPuber.publish(cmdData);
+                sleepDur.sleep();
+                ROS_WARN_STREAM("stop! @[" << robotPose.position.x << "," << robotPose.position.y << "," << robotPose.position.z / 3.14159 * 180 << "]");
+            }
+        }
+        req.request.statue = 2;
+        cmdvelFilterClient.call(req);
+        ROS_WARN_STREAM("Sleep 1.0s wating costmap @[" << robotPose.position.x << "," << robotPose.position.y << "," << robotPose.position.z / 3.14159 * 180 << "]");
+        // sleepDur = ros::Duration(0.5);
+        // sleepDur.sleep();
+        ROS_WARN_STREAM("weak up @["<<robotPose.position.x<<","<<robotPose.position.y<<","<<robotPose.position.z/3.14159*180<<"]");
         return true;
     }
     else
@@ -977,6 +1020,7 @@ void TCP_Sender::ListenRobotPose(geometry_msgs::Pose &robotPose)
             robotPose.position.x = tfs.transform.translation.x;
             robotPose.position.y = tfs.transform.translation.y;
             robotPose.orientation = tfs.transform.rotation;
+            robotPose.position.z = tf::getYaw(robotPose.orientation);
             robotposeMutex.unlock();
             // ROS_INFO_STREAM_NAMED("tcp_sender:", "robotpose_thread: x:" << tfs.transform.translation.x << " y:" << tfs.transform.translation.y);
 
@@ -1007,30 +1051,47 @@ void TCP_Sender::WatchRLStartAndCancleGoal(MoveBaseActionClient* client,ros::Pub
             firstRun = true;
         }
         // std::cout << "watch position" << std::endl;
-        if (robotPose.position.y > -3.9 && robotPose.position.y < -3.8 && abs(robotPose.position.x - 1.01) < 0.15)
+        if (robotPose.position.y > -4.2 && robotPose.position.y < -3.9 && abs(robotPose.position.x - 1.10) < 0.15)
         {
             if(firstRun)
             {
-
-
-                ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: canceling all goal robotpose["<<robotPose.position.x<<","<<robotPose.position.y<<"]");
+                qingzhou_bringup::app cmd_filter_req;
+                cmd_filter_req.request.statue = 1; //close cmd_filter_puber
+                if(cmdvelFilterClient.call(cmd_filter_req))
+                {
+                    ROS_INFO("closed cmdflter puber ");
+                }
+                else
+                {
+                    ROS_INFO("cant closed cmdflter puber ");
+                }
+                ROS_WARN_STREAM_COND(this->_open_debug, "TCP_Sender: canceling all goal, goal switch to goal_start @["<<robotPose.position.x<<","<<robotPose.position.y<<","<<robotPose.position.z/3.1415926*180<<"]");
                 client->cancelAllGoals();
-                ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: cancel all goal and open RL det robotpose["<<robotPose.position.x<<","<<robotPose.position.y<<"]");
+                robot_local_state.curruentGoal = goal_start;
+                ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: cancel all goal and open RL det robotpose[" << robotPose.position.x << "," << robotPose.position.y << "]");
                 firstRun = false;         
             }
-            
+            speed.linear.x = 0.5;
+            speed.angular.z = -(robotPose.position.z - (90.0/180.0*3.1415926))*1.3;
+            ROS_WARN_STREAM("RL START ANGULAR :" << robotPose.position.z / 3.1415926 * 180 << ">>" << speed.angular.z / 3.14 * 180);
             cmdpuber->publish(speed);
             // std::cout << "move forward with x = 0.5" << std::endl;
         }
-        else if(robotPose.position.y > -3.8)
+        else if(robotPose.position.y > -3.9)
         {
             firstRun = true;
-            ROS_INFO_STREAM_COND(this->_open_debug, "TCP_Sender: update pose robotpose[" << robotPose.position.x << "," << robotPose.position.y << "]");
+            ROS_WARN_STREAM_COND(this->_open_debug, "TCP_Sender: Updata pose to open RL @[" << robotPose.position.x << "," << robotPose.position.y <<","<<robotPose.position.z/3.1415926*180<<"]");
             this->UpdateRobotLocation(roadlinestart);
+            // speed.linear.x = 0.0;
+            // speed.angular.z = 0.0;
+            // cmdpuber->publish(speed);
             this->robot_local_state.goalState = reach;
         }
         // rate.sleep() 不是ros的线程，不知道开rate.sleep没有有用
-        sleep(0.05);
+        // sleep(0.05);
+        // std::cout << "sleep begin" << std::endl;
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(25));
+        // std::cout << "sleep end" << std::endl;
     }
 }
 
@@ -1104,16 +1165,16 @@ void TCP_Sender::UpdateToReachLocation()
     if (this->robot_local_state.location == unloadtostart)
     {
         ROS_INFO_STREAM_COND(_open_debug, " OVER SLEEP 0.5s");
-        sleep(0.5);
+        sleep(1.5);
     }
     else if(this->robot_local_state.location == loadingtotfl)
     {
-        ROS_INFO_STREAM_COND(_open_debug, " tfl DO NOT clear costmap");
-
+        ROS_INFO_STREAM_COND(_open_debug, "tfl DO NOT clear costmap");
+        ROS_INFO_NAMED("TCP_Sender", "robot have reached tfl，waiting green...");
     }
     else
     {
-        this->ClearCostmapAndWait();  
+        this->ClearCostmapAndWait();  //不要直接在线程里面sleep，可能会导致车车溜走，因为现在的线速度不会马上为0
     }
     // haveDetectedTfl = false;
     this->robot_local_state.goalState = reach;

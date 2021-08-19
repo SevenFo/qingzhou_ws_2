@@ -24,6 +24,9 @@ class CmdvelFilter(object):
         self.is_not_angular_boost = False
         self.load_angular_boost = False
 
+        self.linear_p = 0.15
+
+
         self.cmd_data_before = Twist()
         self.cmd_data_to_pub = Twist()
 
@@ -47,13 +50,17 @@ class CmdvelFilter(object):
             self.load_angular_boost = False
         elif(req.statue == 6):
             self.load_angular_boost = True
+        elif(req.statue == 7):
+            self.linear_p = 1.0 
+        elif(req.statue == 8):
+            self.linear_p = 0.15
         return 0
 
     
     def cmdvel_sub_cb(self,data):
         self.cmd_data = data
         if(not self.is_not_angular_boost):
-            self.cmd_data.angular.z *= 1.2 
+            self.cmd_data.angular.z *= 1.3
         else:
             self.cmd_data.angular.z *= 1.1
         if(self.load_angular_boost):
@@ -74,8 +81,9 @@ class CmdvelFilter(object):
             if(self.cmd_data_to_pub.linear.x - self.cmd_data.linear.x > 0.2 or self.cmd_data_to_pub.linear.x - self.cmd_data.linear.x < -0.2):
                 #过滤过大的速度变化
                 rospy.logwarn("注意速度跳变过大")
-                self.cmd_data_to_pub.linear.x = self.cmd_data_to_pub.linear.x + (self.cmd_data.linear.x - self.cmd_data_to_pub.linear.x)*0.15
-                rospy.loginfo("{} -> {}".format(self.cmd_data.linear.x,self.cmd_data_to_pub.linear.x))
+                err = (self.cmd_data.linear.x - self.cmd_data_to_pub.linear.x)
+                self.cmd_data_to_pub.linear.x = self.cmd_data_to_pub.linear.x + err*self.linear_p
+                rospy.loginfo("{} -> {}, err:{}".format(self.cmd_data.linear.x,self.cmd_data_to_pub.linear.x,(err)))
             else:
                 self.cmd_data_to_pub = self.cmd_data
             
